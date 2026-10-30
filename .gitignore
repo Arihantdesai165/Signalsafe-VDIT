@@ -213,3 +213,4 @@ __marimo__/
 
 # Migration backups
 backend/data/backups/
+backend/data/college_qrs/

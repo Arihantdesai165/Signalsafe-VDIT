@@ -1,19 +1,30 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import RiskScoreMeter from '../components/common/RiskScoreMeter';
 import CameraModal from '../components/common/CameraModal';
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function ScreenshotScanner() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [scanPhase, setScanPhase] = useState('');
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -22,6 +33,8 @@ export default function ScreenshotScanner() {
       setPreviewUrl(URL.createObjectURL(file));
       setResult(null);
       setErrorMessage(null);
+      setIsAnalyzing(false);
+      setScanPhase('');
     }
   };
 
@@ -33,6 +46,8 @@ export default function ScreenshotScanner() {
       setPreviewUrl(URL.createObjectURL(file));
       setResult(null);
       setErrorMessage(null);
+      setIsAnalyzing(false);
+      setScanPhase('');
     }
   };
 
@@ -41,21 +56,50 @@ export default function ScreenshotScanner() {
     setPreviewUrl(URL.createObjectURL(file));
     setResult(null);
     setErrorMessage(null);
+    setIsAnalyzing(false);
+    setScanPhase('');
   };
 
   const handleAnalyze = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || isAnalyzing) return;
 
     setIsAnalyzing(true);
     setErrorMessage(null);
+    setResult(null);
+
+    // Staged progression of secondary messages over ~5.6s (within 5-8s range)
+    const minDelay = async () => {
+      if (!isMountedRef.current) return;
+      setScanPhase('Reading receipt text via OCR engine...');
+      await sleep(1400);
+      if (!isMountedRef.current) return;
+      setScanPhase('Extracting transaction details & UTR/RRN...');
+      await sleep(1400);
+      if (!isMountedRef.current) return;
+      setScanPhase('Checking payment reference & timestamps...');
+      await sleep(1400);
+      if (!isMountedRef.current) return;
+      setScanPhase('Comparing with campus reference dataset...');
+      await sleep(1400);
+    };
+
     try {
-      const data = await api.analyzeScreenshot(selectedFile);
-      setResult(data);
+      const [apiData] = await Promise.all([
+        api.analyzeScreenshot(selectedFile),
+        minDelay(),
+      ]);
+      if (isMountedRef.current) {
+        setResult(apiData);
+      }
     } catch (err) {
       console.error('Screenshot analysis error:', err);
-      setErrorMessage(err.message || 'Payment screenshot analysis failed.');
+      if (isMountedRef.current) {
+        setErrorMessage(err.message || 'Payment screenshot analysis failed.');
+      }
     } finally {
-      setIsAnalyzing(false);
+      if (isMountedRef.current) {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -64,6 +108,8 @@ export default function ScreenshotScanner() {
     setPreviewUrl(null);
     setResult(null);
     setErrorMessage(null);
+    setIsAnalyzing(false);
+    setScanPhase('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -189,7 +235,7 @@ export default function ScreenshotScanner() {
       </div>
 
       {/* Main Upload Card */}
-      <div className="erp-card">
+      <div className="erp-card" style={{ padding: '36px 32px' }}>
         <input
           ref={fileInputRef}
           type="file"
@@ -258,59 +304,93 @@ export default function ScreenshotScanner() {
           </div>
         ) : (
           <div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              gap: '16px',
-            }}>
+            {/* 1. Large Polished Receipt Viewfinder */}
+            <div className={`receipt-preview-container ${isAnalyzing ? 'receipt-scanning-active' : ''}`}>
+              {/* Corner Viewfinder Brackets */}
+              <div className="receipt-corner receipt-corner-tl" />
+              <div className="receipt-corner receipt-corner-tr" />
+              <div className="receipt-corner receipt-corner-bl" />
+              <div className="receipt-corner receipt-corner-br" />
+
+              {/* Uploaded Receipt Image */}
+              <img
+                src={previewUrl}
+                alt="Payment Receipt Preview"
+                className="receipt-preview-image"
+              />
+
+              {/* Animated Blue Laser Scanning Overlay */}
+              {isAnalyzing && (
+                <div className="receipt-scan-laser-wrap">
+                  <div className="receipt-scan-line">
+                    <div className="receipt-scan-glow-sweep" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Dynamic Status Indicator While Analyzing */}
+            {isAnalyzing && (
               <div style={{
-                maxWidth: '300px',
-                maxHeight: '340px',
-                overflow: 'hidden',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: '#F9FAFB',
-                padding: '8px',
+                marginTop: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                textAlign: 'center',
               }}>
-                <img
-                  src={previewUrl}
-                  alt="Receipt Preview"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
-                />
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '7px 18px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  color: '#1D4ED8',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)',
+                }}>
+                  <span className="material-symbols-outlined spin-icon" style={{ fontSize: '18px' }}>sync</span>
+                  <span>{scanPhase || 'Scanning Payment Receipt...'}</span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                  Performing OCR text recognition, PhonePe field parsing, and dataset cross-check...
+                </span>
               </div>
+            )}
 
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="btn-secondary"
-                  disabled={isAnalyzing}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
-                  <span>Choose Another Image</span>
-                </button>
+            {/* 2. Equal-Sized Action Buttons Inside the Card */}
+            <div className="receipt-action-buttons">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="btn-secondary receipt-action-btn"
+                disabled={isAnalyzing}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+                <span>Choose Another Image</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  className="btn-primary"
-                  disabled={isAnalyzing}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <span className="material-symbols-outlined spin-icon" style={{ fontSize: '18px' }}>sync</span>
-                      <span>Extracting OCR & Matching Dataset...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>analytics</span>
-                      <span>Verify Receipt Against Dataset</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                className="btn-primary receipt-action-btn"
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <span className="material-symbols-outlined spin-icon" style={{ fontSize: '18px' }}>sync</span>
+                    <span>Scanning Payment Receipt...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>analytics</span>
+                    <span>Verify Receipt Against Dataset</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
@@ -335,7 +415,7 @@ export default function ScreenshotScanner() {
       )}
 
       {/* Results Display */}
-      {result && (
+      {result && !isAnalyzing && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Mandatory Demonstration Data Banner */}
           <div style={{
