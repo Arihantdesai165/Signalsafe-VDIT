@@ -1,78 +1,86 @@
-import os
-import json
-from fastapi import APIRouter
+# -*- coding: utf-8 -*-
+"""API router for URL and phishing detection."""
+
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from ..services.url_service import analyze_url
+from ..services.auth_service import get_current_user
+from ..services.scan_history_service import (
+    get_url_report_count,
+    record_url_report,
+    save_url_scan,
+)
 
 
 class URLRequest(BaseModel):
     url: str
 
 
-# Persistent report storage
-REPORTS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "reports.json")
-
-
-def get_reports():
-    """Load reported URLs and their counts."""
-    if not os.path.exists(REPORTS_FILE):
-        return {}
-    try:
-        with open(REPORTS_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def save_report(url: str):
-    """Increment report count for a URL."""
-    reports = get_reports()
-    url_key = url.strip().lower()
-    reports[url_key] = reports.get(url_key, 0) + 1
-    
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(REPORTS_FILE), exist_ok=True)
-    
-    with open(REPORTS_FILE, "w") as f:
-        json.dump(reports, f, indent=2)
-    return reports[url_key]
-
-
 router = APIRouter(prefix="/api/url", tags=["URL"])
 
 
 @router.post("/analyze")
-async def analyze_url_endpoint(request: URLRequest):
-    """Analyze URL via standard endpoint."""
+async def analyze_url_endpoint(
+    request: URLRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Analyze URL via standard endpoint. Requires SignalSafe authentication.
+    Queries community threat intelligence and persists scan result to PostgreSQL.
+    """
     result = analyze_url(request.url)
     result["url"] = request.url
-    reports = get_reports()
-    url_key = request.url.strip().lower()
-    result["report_count"] = reports.get(url_key, 0)
+
+    # Query persistent community report count from dedicated PostgreSQL
+    report_count = get_url_report_count(request.url)
+    result["report_count"] = report_count
+
+    # Persist scan result to PostgreSQL
+    scan_id = save_url_scan(result, request.url, current_user, report_count)
+    if scan_id:
+        result["scan_id"] = scan_id
+
     return result
 
 
 @router.post("/phishing/analyze")
-async def analyze_phishing_endpoint(request: URLRequest):
+async def analyze_phishing_endpoint(
+    request: URLRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Dedicated phishing analysis endpoint.
     Returns hybrid risk score (ML + Rules).
+    Requires SignalSafe authentication.
     """
     result = analyze_url(request.url)
     result["url"] = request.url
-    reports = get_reports()
-    url_key = request.url.strip().lower()
-    result["report_count"] = reports.get(url_key, 0)
+
+    # Query persistent community report count from dedicated PostgreSQL
+    report_count = get_url_report_count(request.url)
+    result["report_count"] = report_count
+
+    # Persist scan result to PostgreSQL
+    scan_id = save_url_scan(result, request.url, current_user, report_count)
+    if scan_id:
+        result["scan_id"] = scan_id
+
     return result
 
 
 @router.post("/report")
-async def report_url_endpoint(request: URLRequest):
-    """Report a URL as a scam."""
-    new_count = save_report(request.url)
+async def report_url_endpoint(
+    request: URLRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Report a URL as a community threat.
+    Persists count and audit log in dedicated PostgreSQL.
+    """
+    new_count = record_url_report(request.url, current_user)
     return {
         "status": "success",
         "message": "URL reported successfully",
         "url": request.url,
-        "report_count": new_count
+        "report_count": new_count,
     }

@@ -1,0 +1,39 @@
+# ==============================================================================
+# SignalSafe Campus — Dedicated PostgreSQL Database
+# Dedicated container isolated from any other services (e.g. JCER ERP)
+# ==============================================================================
+
+services:
+  signalsafe_postgres:
+    image: postgres:16-alpine
+    container_name: signalsafe_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${SIGNALSAFE_DB_NAME:-signalsafe_db}
+      POSTGRES_USER: ${SIGNALSAFE_DB_USER:-signalsafe_user}
+      POSTGRES_PASSWORD: ${SIGNALSAFE_DB_PASSWORD:-signalsafe_secure_pass_2026}
+    ports:
+      # Bound strictly to 127.0.0.1 (localhost) on a dedicated host port (default 5434)
+      # to prevent any conflict with existing databases (such as JCER ERP on 5432 or local services on 5433).
+      - "127.0.0.1:${SIGNALSAFE_DB_PORT:-5434}:5432"
+    volumes:
+      - signalsafe_pg_data:/var/lib/postgresql/data
+    networks:
+      - signalsafe_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SIGNALSAFE_DB_USER:-signalsafe_user} -d ${SIGNALSAFE_DB_NAME:-signalsafe_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  # Named persistent volume to preserve data across container restarts and recreations
+  signalsafe_pg_data:
+    name: signalsafe_pg_data
+
+networks:
+  # Isolated Docker network exclusively for SignalSafe Campus
+  signalsafe_network:
+    name: signalsafe_network
+    driver: bridge

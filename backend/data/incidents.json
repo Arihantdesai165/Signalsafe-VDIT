@@ -1,0 +1,340 @@
+[
+  {
+    "id": "INC-2026-009",
+    "reported_by": "Rohan Deshmukh",
+    "reporter_email": "student.test@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Computer Science & Engineering",
+    "category": "upi_qr_scam",
+    "category_label": "Fraudulent UPI QR Code",
+    "target_evidence": "upi://pay?pa=tampered@bank",
+    "description": "Counterfeit QR code spotted in library printer stall.",
+    "status": "Resolved",
+    "severity": "Critical",
+    "created_at": "2026-10-30T12:46:09Z",
+    "updated_at": "2026-10-30T12:46:09Z",
+    "notes": [
+      {
+        "id": "NOTE-1",
+        "author": "Prof. Shivakumar",
+        "role": "CYBERADMIN",
+        "text": "Dispatching campus security to library.",
+        "timestamp": "2026-10-30T12:46:09Z"
+      },
+      {
+        "id": "NOTE-2",
+        "author": "Prof. Shivakumar",
+        "role": "CYBERADMIN",
+        "text": "CCTV checked, suspect identified, standee secured.",
+        "timestamp": "2026-10-30T12:46:09Z"
+      },
+      {
+        "id": "NOTE-3",
+        "author": "Prof. Shivakumar",
+        "role": "CYBERADMIN",
+        "text": "Replaced with tamper-proof QR standee.",
+        "timestamp": "2026-10-30T12:46:09Z"
+      }
+    ],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Rohan Deshmukh",
+        "timestamp": "2026-10-30T12:46:09Z",
+        "note": "Submitted via SignalSafe Campus by STUDENT."
+      },
+      {
+        "action": "Status changed from Pending to Under Review",
+        "by": "Prof. Shivakumar",
+        "timestamp": "2026-10-30T12:46:09Z",
+        "note": "Dispatching campus security to library."
+      },
+      {
+        "action": "Investigation Note Added",
+        "by": "Prof. Shivakumar",
+        "timestamp": "2026-10-30T12:46:09Z",
+        "note": "CCTV checked, suspect identified, standee secured."
+      },
+      {
+        "action": "Status changed from Under Review to Resolved",
+        "by": "Prof. Shivakumar",
+        "timestamp": "2026-10-30T12:46:09Z",
+        "note": "Replaced with tamper-proof QR standee."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-008",
+    "reported_by": "Rohan Deshmukh",
+    "reporter_email": "student.test@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Computer Science & Engineering",
+    "category": "phishing_url",
+    "category_label": "Phishing URL / Fake Portal",
+    "target_evidence": "http://malicious-scholarship-portal.test",
+    "description": "Fake scholarship application asking for UPI PIN and fee.",
+    "status": "Pending",
+    "severity": "High",
+    "created_at": "2026-10-30T12:46:09Z",
+    "updated_at": "2026-10-30T12:46:09Z",
+    "notes": [],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Rohan Deshmukh",
+        "timestamp": "2026-10-30T12:46:09Z",
+        "note": "Submitted via SignalSafe Campus by STUDENT."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-007",
+    "reported_by": "Rohan Deshmukh",
+    "reporter_email": "student.test@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Computer Science & Engineering",
+    "category": "upi_qr_scam",
+    "category_label": "Fraudulent UPI QR Code",
+    "target_evidence": "upi://pay?pa=tampered@bank",
+    "description": "Counterfeit QR code spotted in library printer stall.",
+    "status": "Resolved",
+    "severity": "Critical",
+    "created_at": "2026-10-30T12:31:03Z",
+    "updated_at": "2026-10-30T12:31:03Z",
+    "notes": [
+      {
+        "id": "NOTE-1",
+        "author": "Prof. Shivakumar",
+        "role": "CYBERADMIN",
+        "text": "Dispatching campus security to library.",
+        "timestamp": "2026-10-30T12:31:03Z"
+      },
+      {
+        "id": "NOTE-2",
+        "author": "Prof. Shivakumar",
+        "role": "CYBERADMIN",
+        "text": "CCTV checked, suspect identified, standee secured.",
+        "timestamp": "2026-10-30T12:31:03Z"
+      },
+      {
+        "id": "NOTE-3",
+        "author": "Prof. Shivakumar",
+        "role": "CYBERADMIN",
+        "text": "Replaced with tamper-proof QR standee.",
+        "timestamp": "2026-10-30T12:31:03Z"
+      }
+    ],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Rohan Deshmukh",
+        "timestamp": "2026-10-30T12:31:03Z",
+        "note": "Submitted via SignalSafe Campus by STUDENT."
+      },
+      {
+        "action": "Status changed from Pending to Under Review",
+        "by": "Prof. Shivakumar",
+        "timestamp": "2026-10-30T12:31:03Z",
+        "note": "Dispatching campus security to library."
+      },
+      {
+        "action": "Investigation Note Added",
+        "by": "Prof. Shivakumar",
+        "timestamp": "2026-10-30T12:31:03Z",
+        "note": "CCTV checked, suspect identified, standee secured."
+      },
+      {
+        "action": "Status changed from Under Review to Resolved",
+        "by": "Prof. Shivakumar",
+        "timestamp": "2026-10-30T12:31:03Z",
+        "note": "Replaced with tamper-proof QR standee."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-006",
+    "reported_by": "Rohan Deshmukh",
+    "reporter_email": "student.test@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Computer Science & Engineering",
+    "category": "phishing_url",
+    "category_label": "Phishing URL / Fake Portal",
+    "target_evidence": "http://malicious-scholarship-portal.test",
+    "description": "Fake scholarship application asking for UPI PIN and fee.",
+    "status": "Pending",
+    "severity": "High",
+    "created_at": "2026-10-30T12:31:03Z",
+    "updated_at": "2026-10-30T12:31:03Z",
+    "notes": [],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Rohan Deshmukh",
+        "timestamp": "2026-10-30T12:31:03Z",
+        "note": "Submitted via SignalSafe Campus by STUDENT."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-001",
+    "reported_by": "Rohan Deshmukh",
+    "reporter_email": "rohan.deshmukh@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Computer Science & Engineering",
+    "category": "phishing_url",
+    "category_label": "Phishing URL / Fake Portal",
+    "target_evidence": "http://paytem-secure-login.xyz/verify",
+    "description": "Received SMS claiming semester exam registration fee is overdue with a fake payment portal link mimicking Paytm.",
+    "status": "Pending",
+    "severity": "High",
+    "created_at": "2026-10-30T09:40:00Z",
+    "updated_at": "2026-10-30T09:40:00Z",
+    "notes": [],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Rohan Deshmukh",
+        "timestamp": "2026-10-30T09:40:00Z",
+        "note": "Initial student submission via SignalSafe Campus portal."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-002",
+    "reported_by": "Pooja Hegde",
+    "reporter_email": "pooja.hegde@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Electronics & Communication",
+    "category": "upi_qr_scam",
+    "category_label": "Fraudulent UPI QR Code",
+    "target_evidence": "upi://pay?pa=scammer889@fakebank&pn=CampusCanteen",
+    "description": "Found duplicate vinyl sticker placed over official campus cafeteria QR standee with unknown UPI ID.",
+    "status": "Under Review",
+    "severity": "Critical",
+    "created_at": "2026-10-29T14:15:00Z",
+    "updated_at": "2026-10-29T15:00:00Z",
+    "notes": [
+      {
+        "id": "NOTE-1",
+        "author": "Campus CyberAdmin",
+        "role": "CYBERADMIN",
+        "text": "Security team dispatched to physical standees in Block 3 cafeteria. Physical QR removed and verified.",
+        "timestamp": "2026-10-29T15:00:00Z"
+      }
+    ],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Pooja Hegde",
+        "timestamp": "2026-10-29T14:15:00Z",
+        "note": "Initial student report."
+      },
+      {
+        "action": "Status updated to Under Review",
+        "by": "Campus CyberAdmin",
+        "timestamp": "2026-10-29T15:00:00Z",
+        "note": "Physical inspection initiated."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-003",
+    "reported_by": "Prof. Suresh Kulkarni",
+    "reporter_email": "suresh.kulkarni@jcer.edu.in",
+    "reporter_role": "TEACHER",
+    "reporter_dept": "Mechanical Engineering",
+    "category": "credential_theft",
+    "category_label": "Credential Harvesting Site",
+    "target_evidence": "http://jcer-faculty-portal-login.net",
+    "description": "Phishing email circulating claiming faculty must re-verify JCER ERP passwords due to emergency server migration.",
+    "status": "Resolved",
+    "severity": "Critical",
+    "created_at": "2026-10-28T11:20:00Z",
+    "updated_at": "2026-10-28T13:45:00Z",
+    "notes": [
+      {
+        "id": "NOTE-1",
+        "author": "Campus CyberAdmin",
+        "role": "CYBERADMIN",
+        "text": "Domain reported to registrar, blacklisted in campus gateway DNS resolver, and college-wide advisory email broadcasted.",
+        "timestamp": "2026-10-28T13:45:00Z"
+      }
+    ],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Prof. Suresh Kulkarni",
+        "timestamp": "2026-10-28T11:20:00Z",
+        "note": "Faculty submission."
+      },
+      {
+        "action": "Status updated to Resolved",
+        "by": "Campus CyberAdmin",
+        "timestamp": "2026-10-28T13:45:00Z",
+        "note": "Gateway domain sinkhole completed."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-004",
+    "reported_by": "Kavya Patil",
+    "reporter_email": "kavya.patil@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Computer Science & Engineering",
+    "category": "fake_payment_screenshot",
+    "category_label": "Fake Payment Screenshot",
+    "target_evidence": "UTR-882910492819 (GooglePay Tampered)",
+    "description": "Buyer for college cultural fest symposium ticket presented suspicious tampered transaction receipt screenshot with mismatched fonts.",
+    "status": "Resolved",
+    "severity": "Medium",
+    "created_at": "2026-10-27T16:05:00Z",
+    "updated_at": "2026-10-27T17:10:00Z",
+    "notes": [
+      {
+        "id": "NOTE-1",
+        "author": "Campus CyberAdmin",
+        "role": "CYBERADMIN",
+        "text": "Analyzed via SignalSafe Screenshot OCR engine. Confidence 94% fake (font mismatch & invalid timestamp sequence). Fest pass withheld.",
+        "timestamp": "2026-10-27T17:10:00Z"
+      }
+    ],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Kavya Patil",
+        "timestamp": "2026-10-27T16:05:00Z",
+        "note": "Initial submission."
+      },
+      {
+        "action": "Status updated to Resolved",
+        "by": "Campus CyberAdmin",
+        "timestamp": "2026-10-27T17:10:00Z",
+        "note": "Receipt confirmed counterfeit."
+      }
+    ]
+  },
+  {
+    "id": "INC-2026-005",
+    "reported_by": "Aditya Naik",
+    "reporter_email": "aditya.naik@jcer.edu.in",
+    "reporter_role": "STUDENT",
+    "reporter_dept": "Civil Engineering",
+    "category": "suspicious_sms",
+    "category_label": "Scam SMS / Smishing",
+    "target_evidence": "+91 98765 43210 (Header: BZ-JCERSC)",
+    "description": "SMS claiming urgent laptop scholarship disbursement requiring payment of Rs. 250 processing fee via unknown link.",
+    "status": "Pending",
+    "severity": "High",
+    "created_at": "2026-10-30T11:10:00Z",
+    "updated_at": "2026-10-30T11:10:00Z",
+    "notes": [],
+    "audit_trail": [
+      {
+        "action": "Report Submitted",
+        "by": "Aditya Naik",
+        "timestamp": "2026-10-30T11:10:00Z",
+        "note": "Initial student submission."
+      }
+    ]
+  }
+]

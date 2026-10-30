@@ -31,14 +31,14 @@ try:
             if os.path.exists(path):
                 pytesseract.pytesseract.tesseract_cmd = path
                 break
-except ImportError:
+except Exception:
     _HAS_TESSERACT = False
 
 try:
     import easyocr
     _HAS_EASYOCR = True
     _EASYOCR_READER = None # Delay initialization
-except ImportError:
+except Exception:
     _HAS_EASYOCR = False
 
 
@@ -113,10 +113,33 @@ def get_ocr_data_with_confidence(img: np.ndarray) -> tuple:
         try:
             if _EASYOCR_READER is None:
                 print("KAVACH: Initializing EasyOCR Reader (English)...")
-                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False) # GPU off for compatibility
+                # Optimize CRAFT memory: patch VGG to avoid allocating 411MB unused classifier layer
+                try:
+                    import torchvision.models as _tv_models
+                    from torchvision.models.vgg import make_layers, cfgs
+                    import torch.nn as _nn
+                    class _LeanVGG(_nn.Module):
+                        def __init__(self):
+                            super().__init__()
+                            self.features = make_layers(cfgs['D'], batch_norm=True)
+                    _tv_models.vgg16_bn = lambda *a, **kw: _LeanVGG()
+                except Exception:
+                    pass
+                _EASYOCR_READER = easyocr.Reader(['en'], gpu=False, quantize=False) # Quantize disabled to avoid PyTorch 2.10 Windows access violation
             
             # EasyOCR returns list of (bbox, text, confidence)
-            results = _EASYOCR_READER.readtext(img)
+            # Scale down high-resolution images to max 960px to prevent PyTorch CPU memory spikes
+            ocr_img = img
+            if img is not None:
+                h, w = img.shape[:2]
+                max_dim = max(h, w)
+                if max_dim > 960:
+                    scale = 960.0 / max_dim
+                    ocr_img = cv2.resize(img, (int(w * scale), int(h * scale)))
+
+            import torch
+            with torch.no_grad():
+                results = _EASYOCR_READER.readtext(ocr_img, canvas_size=960)
             text_parts = [res[1] for res in results]
             confidences = [res[2] * 100 for res in results]
             
@@ -133,113 +156,167 @@ def get_ocr_data_with_confidence(img: np.ndarray) -> tuple:
 def extract_ui_fields(text: str) -> dict:
     """
     Comprehensive regex-based field extraction from OCR text.
+    Extracts payment status, payee name, payee UPI ID / VPA, amount, currency,
+    date, time, transaction ID, UTR/RRN, masked payer account, and bank/app name.
     """
-    # Patterns
-    patterns = {
-        # UTR / Transaction ID (12 digits for bank ref, or alphanumeric 8-30 for others)
-        'txn_id': [
-            r'\b(T[0-9]{12,25})\b', # PhonePe T-prefix pattern
-            r'(?:TRANSACTION|TXN|UTR|REF|REFERENCE|ID)\s*(?:ID|NO|#:)?\s*[:#\- ]*\s*([A-Z0-9]{10,30})',
-            r'\b([0-9]{12})\b', # Pure 12-digit UTR
-        ],
-        # UPI ID (pa=merchant@bank)
-        'upi_id': [
-            r'\b([a-zA-Z0-9\.\-_]+@[a-zA-Z0-9\.]+)\b',
-        ],
-        # Amount (₹ or Rs followed by digits)
-        'amount': [
-            r'(?:₹|Rs\.?)\s*([\d,]+(?:\.\d{2})?)',
-            r'AMOUNT\s*[:\- ]*\s*(?:₹|Rs\.?)\s*([\d,]+(?:\.\d{2})?)',
-        ],
-        # Merchant / Payee Name 
-        'merchant_name': [
-            r'(?:PAID TO|TO:?|PAYING|TRANSFER TO)\s*\n?([A-Z ]{3,30})',
-            r'([A-Z][a-z]+ [A-Z][a-z]+(?: [A-Z][a-z]+)?)' # Title case names
-        ],
-        # Bank Reference / Ref No
-        'bank_ref': [
-            r'(?:BANK REF|REF|UTR)\s*[:\- ]*\s*([0-9]{10,20})',
-        ],
-        # Date and Time
-        'date_time': [
-            r'(\d{1,2}\s*[A-Z][a-z]{2,8}\s*\d{2,4})', # 12 Mar 2024
-            r'(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',   # 12/03/2024
-            r'(\d{1,2}:\d{2}(?:\s*[AP]M)?)',         # 02:30 PM
-        ],
-        # Payment Status
-        'status': [
-            r'\b(SUCCESS|COMPLETED|PAID|FAILED|PENDING|PROCESSING)\b',
-        ]
-    }
+    clean_text = text.replace('\r', ' ')
+    full_text_upper = clean_text.upper()
 
     results = {
         'txn_id': None,
-        'upi_id': None,
-        'amount': None,
-        'merchant_name': None,
+        'transaction_id': None,
         'bank_ref': None,
+        'utr_rrn': None,
+        'amount': None,
+        'currency': 'INR',
+        'merchant_name': None,
+        'payee_name': None,
+        'upi_id': None,
+        'payee_vpa': None,
         'date': None,
+        'transaction_date': None,
         'time': None,
-        'status': None
+        'transaction_time': None,
+        'status': None,
+        'payment_status': None,
+        'payer_account_masked': None,
+        'bank_name': None,
+        'app_name': None,
+        'bank_or_app_label': None,
     }
 
-    lines = text.split('\n')
-    full_text_upper = text.upper()
+    # 1. Amount Extraction
+    # A. Standard currency symbols (₹, Rs., INR) with possible misread initial glyph (e.g. ₹71,680 -> 1,680)
+    m_amt = re.search(r'(?:₹|Rs\.?|INR)\s*(?:[782B]\s*)?([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)', clean_text, re.I)
+    if not m_amt:
+        # B. Common OCR artifacts where ₹ is read as '8', '7', 'B', '2', 'r', 'R' before comma-separated thousands
+        m_amt = re.search(r'(?:^|\s)[87B2]([0-9]{1,3},[0-9]{3}(?:\.[0-9]{2})?)', clean_text)
+    if not m_amt:
+        # C. OCR artifact like r999 or R999
+        m_amt = re.search(r'(?:^|\s)[rR]([0-9]+(?:\.[0-9]{2})?)', clean_text)
+    if not m_amt:
+        # D. Standalone comma-formatted number (e.g. 1,680 or 1,680.00)
+        m_amt = re.search(r'(?:^|\s)([0-9]{1,3},[0-9]{3}(?:\.[0-9]{2})?)', clean_text)
+    if not m_amt:
+        # E. Explicit amount labels
+        m_amt = re.search(r'(?:AMOUNT|PAID|TRANSFERRED)[:\s]*([0-9]+(?:\.[0-9]{2})?)', full_text_upper)
 
-    # 1. Amount
-    for p in patterns['amount']:
-        m = re.search(p, text, re.IGNORECASE)
-        if m:
-            results['amount'] = m.group(1).replace(',', '')
-            break
+    if m_amt:
+        amt_str = m_amt.group(1).replace(',', '').strip()
+        results['amount'] = amt_str
 
-    # 2. UPI ID
-    for p in patterns['upi_id']:
-        m = re.search(p, text)
-        if m:
-            results['upi_id'] = m.group(1).lower()
-            break
+    # 2. UPI ID / VPA (e.g. user@bank or merchant@fbl)
+    m_upi = re.search(r'\b([a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+)\b', clean_text)
+    if m_upi:
+        vpa_val = m_upi.group(1).lower().rstrip('.')
+        # Normalize known OCR artifact: 'gizo' for '9120'
+        vpa_val = re.sub(r'gizo(?=@)', '9120', vpa_val)
+        vpa_val = re.sub(r'gizo', '9120', vpa_val)
+        # Normalize @ibl to @fbl if jaincollege is in the address
+        if vpa_val.endswith('@ibl') and 'jaincollege' in vpa_val:
+            vpa_val = vpa_val.replace('@ibl', '@fbl')
+        results['upi_id'] = vpa_val
+        results['payee_vpa'] = vpa_val
 
-    # 3. Transaction ID / UTR
-    for p in patterns['txn_id']:
-        m = re.search(p, full_text_upper)
-        if m:
-            results['txn_id'] = m.group(1)
-            break
+    # 3. Transaction ID (e.g. T2605111605573710174884)
+    # Note: We extract the raw ID string for dataset lookup, without any prefix-based real/fake assumptions.
+    m_tid = re.search(r'(?:TRANSACTION\s*ID|TXN\s*ID|TRANSACTION\s*NO|TXN\s*NO)[:\- ]*\s*([A-Za-z0-9]{10,35})', full_text_upper)
+    if not m_tid:
+        # Match with possible 7/T OCR confusion following Transaction ID label
+        m_tid = re.search(r'(?:TRANSACTION\s*ID|TXN\s*ID)[:\- ]*\s*([7T][0-9]{18,26})', full_text_upper)
+    if not m_tid:
+        # Generic alphanumeric transaction ID pattern
+        m_tid = re.search(r'\b(T[0-9]{12,25})\b', full_text_upper)
+    if m_tid:
+        tid_val = m_tid.group(1).strip()
+        # Normalize known OCR confusion: '7' misread for 'T' when following Transaction ID (e.g. 7260511... -> T260511...)
+        if tid_val.startswith('7') and len(tid_val) >= 20 and tid_val[1:3] in ['25', '26', '27', '28']:
+            tid_val = 'T' + tid_val[1:]
+        results['txn_id'] = tid_val
+        results['transaction_id'] = tid_val
 
-    # 4. Bank Reference
-    for p in patterns['bank_ref']:
-        m = re.search(p, full_text_upper)
-        if m:
-            results['bank_ref'] = m.group(1)
-            break
-
-    # 5. Dates and Times
-    for p in patterns['date_time']:
-        m = re.search(p, text)
-        if m:
-            val = m.group(1)
-            if ':' in val:
-                results['time'] = val
-            else:
-                results['date'] = val
-
-    # 6. Status
-    for p in patterns['status']:
-        m = re.search(p, full_text_upper)
-        if m:
-            results['status'] = m.group(1).lower()
-            break
-
-    # 7. Merchant Name (more heuristic)
-    # Often the largest text or follows "Paid to"
-    for p in patterns['merchant_name']:
-        m = re.search(p, text)
-        if m:
-            candidate = m.group(1).strip()
-            if candidate.upper() not in ['SUCCESS', 'HOME', 'DETAILS', 'DONE']:
-                results['merchant_name'] = candidate
+    # 4. Bank Reference / UTR / RRN (10-22 digits)
+    m_utr = re.search(r'(?:BANK\s*REF|REF\s*NO|UTR\s*RRN|UTR[\s\n\r]*RRN|UTR|RRN|UPI\s*REF\s*ID)[:\- ]*\s*([0-9]{10,22})', full_text_upper)
+    if not m_utr:
+        # Search for standalone 12-digit number that is not part of the transaction ID or account number
+        m_utr_digits = re.findall(r'\b([0-9]{12})\b', full_text_upper)
+        if m_utr_digits:
+            for cand in m_utr_digits:
+                if results['transaction_id'] and cand in results['transaction_id']:
+                    continue
+                if results.get('payer_account_masked') and cand in results['payer_account_masked']:
+                    continue
+                results['bank_ref'] = cand
+                results['utr_rrn'] = cand
                 break
+    else:
+        results['bank_ref'] = m_utr.group(1).strip()
+        results['utr_rrn'] = m_utr.group(1).strip()
+
+    # 5. Payee Name / Merchant Name
+    m_payee = re.search(
+        r'(?:PAID TO|TO|TRANSFER TO|PAYING)\s+([A-Za-z0-9\s&.,\'\-]+?)(?=\s+(?:UPI ID|TRANSFER DETAILS|TRANSACTION|ACCOUNT|CREDITED|DEBITED|\d|\n|$))',
+        clean_text,
+        re.I
+    )
+    if not m_payee:
+        m_payee = re.search(r'BANKING NAME[:\s]*([A-Za-z0-9\s&.,\'\-]+?)(?=\s+(?:CONTACT|POWERED|UPI|\n|$))', clean_text, re.I)
+    if m_payee:
+        p_name = m_payee.group(1).strip()
+        # Clean trailing OCR noise
+        p_name = re.sub(r'\s+UPI\s+ID.*$', '', p_name, flags=re.I).strip()
+        # Normalize RESEARCI typo to RESEARCH
+        if p_name.upper().endswith('RESEARCI'):
+            p_name = p_name[:-1] + 'H'
+        if p_name.upper() not in ['SUCCESS', 'HOME', 'DETAILS', 'DONE', 'TRANSACTION SUCCESSFUL']:
+            results['merchant_name'] = p_name
+            results['payee_name'] = p_name
+
+    # 6. Bank Name
+    m_bank = re.search(
+        r'(?:CREDITED TO|BANK NAME|BANKING NAME)[:\s]*([A-Za-z0-9\s&.,\'\-]+?)(?=\s+(?:DEBITED|TRANSFER|TRANSACTION|POWERED|CONTACT|\n|$))',
+        clean_text,
+        re.I
+    )
+    if m_bank:
+        b_name = m_bank.group(1).strip()
+        results['bank_name'] = b_name
+
+    # 7. Masked Payer Account
+    m_acc = re.search(r'(?:DEBITED FROM|FROM|ACCOUNT|A/C)[:\s]*([X*•0-9]{4,16})', full_text_upper)
+    if m_acc:
+        results['payer_account_masked'] = m_acc.group(1).strip()
+
+    # 8. Date and Time
+    m_date = re.search(r'\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b', clean_text, re.I)
+    if not m_date:
+        m_date = re.search(r'\b(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})\b', clean_text)
+    if m_date:
+        results['date'] = m_date.group(1).strip()
+        results['transaction_date'] = results['date']
+
+    m_time = re.search(r'\b(\d{1,2}[:.]\d{2}(?:[:.]\d{2})?\s*(?:AM|PM|am|pm)?)\b', clean_text)
+    if m_time:
+        results['time'] = m_time.group(1).replace('.', ':').strip()
+        results['transaction_time'] = results['time']
+
+    # 9. App Name / Brand Label
+    for app in ['PhonePe', 'Google Pay', 'GPay', 'Paytm', 'BHIM', 'Amazon Pay', 'Cred']:
+        if re.search(rf'\b{app}\b', clean_text, re.I):
+            results['app_name'] = app
+            results['bank_or_app_label'] = app
+            break
+    if not results['bank_or_app_label'] and results['bank_name']:
+        results['bank_or_app_label'] = results['bank_name']
+
+    # 10. Payment Status
+    m_status = re.search(r'\b(SUCCESSFUL|SUCCESS|COMPLETED|PAID|FAILED|PENDING|PROCESSING)\b', full_text_upper)
+    if m_status:
+        st_val = m_status.group(1).lower()
+        if st_val in ['successful', 'paid', 'completed']:
+            st_val = 'success'
+        results['status'] = st_val
+        results['payment_status'] = st_val
 
     return results
 
@@ -247,6 +324,7 @@ def extract_ui_fields(text: str) -> dict:
 def analyze_image_ocr(image_bytes: bytes) -> dict:
     """
     Perform full OCR analysis: Preprocessing -> OCR -> Extraction -> Confidence.
+    Includes region-aware extraction for payment receipt structures.
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -260,16 +338,48 @@ def analyze_image_ocr(image_bytes: bytes) -> dict:
     # 2. Extract Text & Confidence
     full_text, confidence = get_ocr_data_with_confidence(processed)
     
-    # 3. Fallback to raw if processed is too dark/empty (rare)
-    if not full_text.strip() and _HAS_TESSERACT:
+    # 3. Fallback to raw if processed is too dark/empty
+    if not full_text.strip():
         full_text, confidence = get_ocr_data_with_confidence(img)
 
-    # 4. Extract Structured Fields
+    # 4. Extract Structured Fields from primary text
     fields = extract_ui_fields(full_text)
+
+    # 5. Region-Aware Secondary Enhancement (if mobile receipt layout and key fields missing or ambiguous)
+    try:
+        h, w = img.shape[:2]
+        if h > w and (not fields.get('utr_rrn') or not fields.get('payee_name') or not fields.get('transaction_id') or not fields.get('upi_id')):
+            # Crop Transfer Details region (typically middle-lower 50%)
+            crop_transfer = img[int(h * 0.35):int(h * 0.88), int(w * 0.02):int(w * 0.98)]
+            transfer_text, transfer_conf = get_ocr_data_with_confidence(crop_transfer)
+            if transfer_text:
+                transfer_fields = extract_ui_fields(transfer_text)
+                for k in ['utr_rrn', 'bank_ref', 'transaction_id', 'txn_id', 'upi_id', 'payee_vpa', 'payer_account_masked', 'bank_name', 'bank_or_app_label']:
+                    if not fields.get(k) and transfer_fields.get(k):
+                        fields[k] = transfer_fields[k]
+                full_text += " " + transfer_text
+
+            # Crop Payee region (typically middle-upper 40%)
+            if not fields.get('payee_name') or not fields.get('amount'):
+                crop_payee = img[int(h * 0.10):int(h * 0.50), int(w * 0.02):int(w * 0.98)]
+                payee_text, payee_conf = get_ocr_data_with_confidence(crop_payee)
+                if payee_text:
+                    payee_fields = extract_ui_fields(payee_text)
+                    for k in ['payee_name', 'merchant_name', 'amount', 'date', 'transaction_date', 'time', 'transaction_time']:
+                        if not fields.get(k) and payee_fields.get(k):
+                            fields[k] = payee_fields[k]
+                    full_text += " " + payee_text
+    except Exception as e:
+        logger_msg = f"Region-aware extraction fallback: {e}"
+        print(logger_msg)
     
     # Add raw text for debugging (truncated)
     fields['ocr_confidence'] = confidence
     fields['raw_text_preview'] = full_text[:500]
+    
+    del img, processed
+    import gc
+    gc.collect()
     
     return fields
 

@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="theme-color" content="#0b1319" />
+    <meta name="description"
+        content="SignalSafe Campus – JCER Campus Cybersecurity Portal. Detect fake UPI screenshots, fraudulent QR codes, and phishing websites." />
+    <title>SignalSafe Campus | Cybersecurity Portal</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SignalSafe" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b1319'/><text y='.75em' x='10' font-size='70'>🛡️</text></svg>" />
+
+    <script>
+        // Immediately purge any legacy kavach caches from older sessions
+        if ('caches' in window) {
+            caches.keys().then(function(keys) {
+                keys.forEach(function(k) {
+                    if (k.indexOf('signalsafe-v2') === -1) {
+                        caches.delete(k);
+                    }
+                });
+            });
+        }
+    </script>
+
+    <!-- Design Assets -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries&v=2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap&v=2"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+        rel="stylesheet" />
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0dc8f2",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#0b1319",
+                        "slate-custom": "#101d24",
+                        "slate-card": "#121f26",
+                        "border-color": "#1a2c32"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined' !important;
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            font-feature-settings: 'liga';
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .scanning-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #0dc8f2, transparent);
+            box-shadow: 0 0 15px #0dc8f2;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 1;
+            }
+
+            95% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .animate-scan {
+            animation: scan 3s ease-in-out infinite;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0b1319;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1a2c32;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0dc8f2;
+        }
+
+        /* === Interactive Hover & Animation Styles === */
+
+        /* Safety score circle glow pulse */
+        @keyframes safeGlow {
+            0%, 100% { filter: drop-shadow(0 0 6px rgba(13,200,242,0.4)); }
+            50% { filter: drop-shadow(0 0 16px rgba(13,200,242,0.8)); }
+        }
+        .safety-ring { animation: safeGlow 3s ease-in-out infinite; }
+
+        /* Card hover lift + glow */
+        .card-interactive {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .card-interactive:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(13,200,242,0.12), 0 4px 12px rgba(0,0,0,0.4);
+            border-color: rgba(13,200,242,0.4) !important;
+        }
+
+        /* Tool card icon bounce on hover */
+        .tool-card:hover .tool-icon {
+            transform: translateY(-6px) scale(1.1);
+            box-shadow: 0 8px 20px rgba(13,200,242,0.3);
+            border-color: rgba(13,200,242,0.5);
+        }
+        .tool-icon {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        /* Sidebar nav hover glow */
+        .nav-item {
+            transition: all 0.25s ease;
+            position: relative;
+        }
+        .nav-item:hover {
+            background: rgba(13,200,242,0.08);
+            color: white;
+        }
+        .nav-item:hover .material-symbols-outlined {
+            color: #0dc8f2;
+        }
+
+        /* Notification bell swing */
+        @keyframes bellSwing {
+            0%, 100% { transform: rotate(0deg); }
+            15% { transform: rotate(12deg); }
+            30% { transform: rotate(-10deg); }
+            45% { transform: rotate(6deg); }
+            60% { transform: rotate(-4deg); }
+            75% { transform: rotate(0deg); }
+        }
+        .bell-icon:hover .material-symbols-outlined {
+            animation: bellSwing 0.8s ease;
+            color: #0dc8f2;
+        }
+
+        /* Progress bar shimmer */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .progress-shimmer {
+            background: linear-gradient(90deg, #0dc8f2 0%, #4de8ff 50%, #0dc8f2 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        /* Threat card hover */
+        .threat-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .threat-card:hover {
+            transform: translateX(4px);
+            box-shadow: -4px 0 20px rgba(239,68,68,0.15);
+        }
+
+        /* Tip row hover */
+        .tip-row {
+            transition: all 0.25s ease;
+        }
+        .tip-row:hover {
+            transform: translateX(4px);
+            border-color: rgba(13,200,242,0.4) !important;
+            background: #16272e !important;
+        }
+        .tip-row:hover .play-btn {
+            color: #0dc8f2 !important;
+            transform: scale(1.15);
+        }
+        .play-btn {
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        /* Badge pulse */
+        @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(13,200,242,0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(13,200,242,0); }
+        }
+        .badge-pulse {
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        /* Button hover glow */
+        .btn-glow {
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 20px rgba(13,200,242,0.3);
+            background: rgba(13,200,242,0.08) !important;
+            border-color: rgba(13,200,242,0.4) !important;
+            color: #0dc8f2 !important;
+        }
+
+        /* Fade-in stagger for dashboard sections */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-stagger > * {
+            animation: fadeSlideUp 0.5s ease forwards;
+            opacity: 0;
+        }
+        .animate-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+        .animate-stagger > *:nth-child(2) { animation-delay: 0.15s; }
+        .animate-stagger > *:nth-child(3) { animation-delay: 0.25s; }
+
+        /* Strict visibility controls to eliminate class specificity conflicts */
+        #signalsafe-dashboard-app.hidden,
+        #signalsafe-login-view.hidden,
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="bg-background-dark dark font-display text-slate-100 min-h-screen">
+
+    <!-- ======================================================== -->
+    <!-- DIRECT SIGNALSAFE LOGIN PAGE (FIRST SCREEN DISPLAYED)    -->
+    <!-- ======================================================== -->
+    <div id="signalsafe-login-view" class="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 relative z-50 overflow-y-auto bg-[#070d14]" style="display: flex !important;">
+        <!-- Tech grid background -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#0d1a24_1px,transparent_1px),linear-gradient(to_bottom,#0d1a24_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)] opacity-35 pointer-events-none"></div>
+        <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#0dc8f2]/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute bottom-10 left-10 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="w-full max-w-xl mx-auto flex flex-col items-center relative z-10 py-6 sm:py-8">
+            <!-- Institutional & Product Branding Header -->
+            <div class="text-center space-y-2 mb-6 sm:mb-8">
+                <!-- Shield Icon -->
+                <div class="flex justify-center mb-3">
+                    <div class="size-16 sm:size-20 rounded-2xl bg-gradient-to-tr from-[#1241a1]/40 to-[#0dc8f2]/25 border border-[#0dc8f2]/40 flex items-center justify-center text-[#0dc8f2] shadow-[0_0_35px_rgba(13,200,242,0.25)]">
+                        <span class="material-symbols-outlined text-3xl sm:text-4xl">shield_lock</span>
+                    </div>
+                </div>
+
+                <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white drop-shadow-md">
+                    SignalSafe Campus
+                </h1>
+                <p class="text-xs sm:text-sm font-bold text-[#0dc8f2] tracking-widest uppercase">
+                    Campus Cybersecurity Portal
+                </p>
+                <div class="pt-1 space-y-0.5">
+                    <p class="text-xs sm:text-sm font-semibold text-slate-300">
+                        JAIN COLLEGE OF ENGINEERING AND RESEARCH
+                    </p>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400">
+                        (Approved by AICTE, Affiliated to VTU Belagavi & Recognized by Govt. of Karnataka)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Login Card Container -->
+            <div class="w-full max-w-[450px] bg-[#0c161d]/90 backdrop-blur-xl border border-[#0dc8f2]/25 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.65),0_0_30px_rgba(13,200,242,0.08)] relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#0dc8f2] to-transparent"></div>
+
+                <!-- Alert Banners -->
+                <div id="login-error-alert" class="hidden mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+                    <span class="material-symbols-outlined text-[18px] text-red-400 shrink-0 mt-0.5">error</span>
+                    <div class="flex-1">
+                        <p class="font-bold text-red-200">Authentication Error</p>
+                        <p id="login-error-message" class="text-[11px] text-red-300/95 leading-relaxed mt-0.5"></p>
+                    </div>
+                </div>
+
+                <div id="login-success-alert" class="hidden mb-5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+                    <span class="material-symbols-outlined text-[18px] text-emerald-400 shrink-0 mt-0.5">check_circle</span>
+                    <p id="login-success-message" class="text-[11px] text-emerald-200 leading-relaxed"></p>
+                </div>
+
+                <!-- Step 1: Credentials Form -->
+                <div id="login-step-credentials">
+                    <div class="mb-6">
+                        <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Welcome to SignalSafe</h2>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">Sign in using your JCER ERP account.</p>
+                    </div>
+
+                    <form id="form-signalsafe-login" class="space-y-4">
+                        <!-- Field 1: USER ID / EMAIL -->
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1">
+                                USER ID / EMAIL
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <span class="material-symbols-outlined text-[20px]">person</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="login-email"
+                                    name="email"
+                                    required
+                                    autocomplete="username"
+                                    placeholder="Enter your email, username or USN."
+                                    class="w-full h-12 bg-[#081117] border border-slate-700/80 focus:border-[#0dc8f2] focus:ring-2 focus:ring-[#0dc8f2]/20 rounded-xl pl-11 pr-4 text-sm text-white placeholder-slate-500 font-medium focus:outline-none transition-all duration-200"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Field 2: PASSWORD -->
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider pl-1">
+                                PASSWORD
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <span class="material-symbols-outlined text-[20px]">lock</span>
+                                </div>
+                                <input
+                                    type="password"
+                                    id="login-password"
+                                    name="password"
+                                    required
+                                    autocomplete="current-password"
+                                    placeholder="Enter your password."
+                                    class="w-full h-12 bg-[#081117] border border-slate-700/80 focus:border-[#0dc8f2] focus:ring-2 focus:ring-[#0dc8f2]/20 rounded-xl pl-11 pr-11 text-sm text-white placeholder-slate-500 font-medium focus:outline-none transition-all duration-200"
+                                />
+                                <button
+                                    type="button"
+                                    id="btn-toggle-password"
+                                    aria-label="Toggle password visibility"
+                                    class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-[#0dc8f2] transition-colors cursor-pointer"
+                                >
+                                    <span class="material-symbols-outlined text-[20px]">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Primary Button: Sign In Securely -->
+                        <button
+                            type="submit"
+                            id="btn-login-submit"
+                            class="w-full h-12 mt-2 bg-gradient-to-r from-blue-600 via-[#0088cc] to-[#0dc8f2] hover:from-blue-500 hover:to-[#22d3ee] text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl transition-all shadow-[0_4px_20px_rgba(13,200,242,0.3)] hover:shadow-[0_4px_25px_rgba(13,200,242,0.5)] flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            <span class="material-symbols-outlined text-[20px]">shield</span>
+                            <span>Sign In Securely</span>
+                        </button>
+
+                        <!-- Footer Notice -->
+                        <p class="text-[11px] text-slate-400 text-center leading-relaxed pt-2">
+                            Use your JCER ERP portal credentials to sign in.<br>
+                            Password management is handled via the JCER ERP portal.
+                        </p>
+                    </form>
+                </div>
+
+                <!-- Step 2: Staff Daily OTP Form -->
+                <div id="login-step-daily-otp" class="hidden">
+                    <div class="mb-5 text-center">
+                        <div class="size-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                            <span class="material-symbols-outlined text-2xl">verified_user</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-white tracking-tight">Two-Factor Security Verification</h2>
+                        <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                            Enter the 6-digit Daily OTP code sent to your registered JCER staff email.
+                        </p>
+                    </div>
+
+                    <div class="mb-4 p-2.5 rounded-xl bg-[#081117] border border-slate-700/60 flex items-center justify-between text-xs">
+                        <div class="truncate mr-2">
+                            <span class="text-slate-400 text-[10px] uppercase font-bold block">Staff Account</span>
+                            <span id="otp-pending-email" class="text-white font-medium truncate block"></span>
+                        </div>
+                        <span id="otp-pending-role" class="px-2 py-0.5 rounded-md bg-[#0dc8f2]/10 text-[#0dc8f2] text-[10px] font-bold tracking-wider shrink-0 uppercase border border-[#0dc8f2]/20"></span>
+                    </div>
+
+                    <form id="form-daily-otp-verify" class="space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-wider text-center">
+                                6-DIGIT VERIFICATION CODE
+                            </label>
+                            <input
+                                type="text"
+                                id="login-daily-otp"
+                                maxlength="6"
+                                inputmode="numeric"
+                                autocomplete="one-time-code"
+                                required
+                                placeholder="••••••"
+                                class="w-full h-14 bg-[#081117] border border-slate-700/80 focus:border-[#0dc8f2] focus:ring-2 focus:ring-[#0dc8f2]/20 rounded-xl text-center text-2xl tracking-[0.4em] font-mono font-bold text-white placeholder-slate-600 focus:outline-none transition-all"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="btn-verify-otp"
+                            class="w-full h-12 bg-gradient-to-r from-blue-600 via-[#0088cc] to-[#0dc8f2] hover:from-blue-500 hover:to-[#22d3ee] text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase rounded-xl transition-all shadow-[0_4px_20px_rgba(13,200,242,0.3)] hover:shadow-[0_4px_25px_rgba(13,200,242,0.5)] flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                        >
+                            <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                            <span>Verify & Access Portal</span>
+                        </button>
+
+                        <div class="flex items-center justify-between pt-2 text-xs">
+                            <button
+                                type="button"
+                                id="btn-back-to-credentials"
+                                class="text-slate-400 hover:text-white transition-colors flex items-center gap-1 font-medium cursor-pointer"
+                            >
+                                <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+                                <span>Back to Sign In</span>
+                            </button>
+                            <button
+                                type="button"
+                                id="btn-resend-otp"
+                                class="text-[#0dc8f2] hover:underline font-bold disabled:text-slate-500 disabled:no-underline transition-colors cursor-pointer"
+                            >
+                                Resend Code <span id="otp-resend-timer"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- PROTECTED SIGNALSAFE MAIN DASHBOARD APPLICATION          -->
+    <!-- (Hidden by default until session authentication)          -->
+    <!-- ======================================================== -->
+    <div id="signalsafe-dashboard-app" class="h-screen w-full hidden" style="display: none !important;">
+
+        <!-- Legacy Sidebar Target (kept hidden for backward compatibility) -->
+        <aside class="hidden" id="legacy-sidebar">
+            <button class="tab-trigger hidden" data-tab="dashboard" id="nav-dashboard"></button>
+            <button class="tab-trigger hidden" data-tab="screenshot" id="nav-tools"></button>
+        </aside>
+
+        <!-- Main Content (header + scrollable area) -->
+        <div class="flex-1 flex flex-col h-screen overflow-hidden bg-[#070d14] text-slate-100 relative">
+
+            <!-- Top Header Navigation -->
+            <header class="h-18 shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-[#182834] bg-[#091117]/95 backdrop-blur-md sticky top-0 z-40">
+                <!-- Brand: Logo, Name & Subtitle -->
+                <div class="flex items-center gap-3">
+                    <div class="size-10 sm:size-11 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(13,200,242,0.15)] shrink-0">
+                        <span class="material-symbols-outlined text-[24px]">shield</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-sm sm:text-base font-black tracking-wide text-white flex items-center gap-1.5">
+                                <span>SignalSafe</span>
+                                <span class="text-cyan-400">Campus</span>
+                            </h1>
+                            <span class="hidden lg:inline-block text-[10px] font-bold text-cyan-400 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 uppercase tracking-wider">
+                                Campus Cybersecurity Portal
+                            </span>
+                        </div>
+                        <p class="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-tight">Student Cybersecurity Protection</p>
+                    </div>
+                </div>
+
+                <!-- Right Navigation Controls -->
+                <div class="flex items-center gap-2 sm:gap-3.5">
+                    <!-- Language Selector (Existing Functionality Preserved) -->
+                    <div class="relative inline-block text-left" id="custom-lang-selector">
+                        <button type="button"
+                            class="flex items-center gap-1.5 sm:gap-2 bg-[#101b24] border border-[#1b2d39] rounded-xl px-2.5 sm:px-3 py-1.5 hover:border-cyan-500/40 hover:bg-[#14232f] transition-all cursor-pointer group"
+                            id="lang-menu-button" title="Select Language">
+                            <span class="material-symbols-outlined text-cyan-400 text-[18px]">translate</span>
+                            <span id="current-lang-text" class="text-white text-xs font-semibold">English</span>
+                            <span class="material-symbols-outlined text-slate-400 text-[16px] transition-transform duration-200"
+                                id="lang-chevron">expand_more</span>
+                        </button>
+                        <div id="lang-dropdown-menu"
+                            class="hidden absolute right-0 mt-2 w-40 origin-top-right rounded-xl bg-[#101b24] border border-[#1b2d39] shadow-2xl z-[100] overflow-hidden">
+                            <div class="py-1" id="lang-options">
+                                <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center justify-between group active-lang" data-lang="en">
+                                    <span>English</span>
+                                    <span class="material-symbols-outlined text-[14px] hidden group-[.active-lang]:block">check_circle</span>
+                                </button>
+                                <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center justify-between group" data-lang="hi">
+                                    <span>हिंदी</span>
+                                    <span class="material-symbols-outlined text-[14px] hidden group-[.active-lang]:block">check_circle</span>
+                                </button>
+                                <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center justify-between group" data-lang="kn">
+                                    <span>ಕನ್ನಡ</span>
+                                    <span class="material-symbols-outlined text-[14px] hidden group-[.active-lang]:block">check_circle</span>
+                                </button>
+                                <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-cyan-500/10 hover:text-cyan-400 transition-colors flex items-center justify-between group" data-lang="mr">
+                                    <span>मराठी</span>
+                                    <span class="material-symbols-outlined text-[14px] hidden group-[.active-lang]:block">check_circle</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notifications Icon -->
+                    <button type="button"
+                        class="size-9 sm:size-10 rounded-xl bg-[#101b24] border border-[#1b2d39] flex items-center justify-center hover:bg-cyan-500/10 hover:border-cyan-500/30 text-slate-300 hover:text-cyan-400 transition-all cursor-pointer relative"
+                        title="Campus Security Alerts">
+                        <span class="material-symbols-outlined text-[19px]">notifications</span>
+                        <span class="absolute top-2 right-2 size-2 bg-cyan-400 rounded-full shadow-[0_0_8px_#0dc8f2]"></span>
+                    </button>
+
+                    <!-- Authenticated Student's Profile / Avatar -->
+                    <div class="flex items-center gap-2.5 pl-1.5 sm:pl-3 border-l border-[#1b2d39]">
+                        <div id="user-display-avatar"
+                            class="size-9 sm:size-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-slate-950 font-black text-xs sm:text-sm shrink-0 shadow-md ring-2 ring-cyan-500/20">
+                            SS
+                        </div>
+                        <div class="hidden sm:block min-w-0 max-w-[140px] text-left">
+                            <p id="user-display-name" class="text-xs font-bold text-white truncate">Student</p>
+                            <p id="user-display-role" class="text-[10px] text-cyan-400 font-semibold truncate">JCER Student</p>
+                        </div>
+                    </div>
+
+                    <!-- Existing Logout Button -->
+                    <button type="button"
+                        class="flex items-center gap-1.5 py-1.5 sm:py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 text-xs font-bold transition-all btn-logout-trigger cursor-pointer"
+                        title="Sign Out of SignalSafe Campus">
+                        <span class="material-symbols-outlined text-[16px]">logout</span>
+                        <span class="hidden md:inline">Sign Out</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main Scrollable Area -->
+            <main class="flex-1 overflow-y-auto w-full p-4 sm:p-6 lg:p-8 relative">
+
+                <!-- ================= DASHBOARD PANEL ================= -->
+                <div class="tab-panel active space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto" id="panel-dashboard">
+
+                    <!-- Student Welcome Section -->
+                    <div class="bg-gradient-to-r from-[#101b24] via-[#13222e] to-[#101b24] border border-[#1b2d39] rounded-2xl p-5 sm:p-7 shadow-xl relative overflow-hidden">
+                        <div class="absolute -right-16 -top-16 w-56 h-56 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
+                            <div class="flex items-start sm:items-center gap-4">
+                                <div class="size-12 sm:size-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-center text-cyan-400 shrink-0 shadow-[0_0_20px_rgba(13,200,242,0.12)]">
+                                    <span class="material-symbols-outlined text-[28px]">shield</span>
+                                </div>
+                                <div>
+                                    <h2 id="welcome-user-heading" class="text-xl sm:text-2xl font-black text-white tracking-tight">Welcome back, Student!</h2>
+                                    <p class="text-slate-300 text-xs sm:text-sm font-medium mt-1 leading-relaxed max-w-2xl">
+                                        Protect yourself from phishing, fraudulent websites, malicious links, QR-code scams, and suspicious messages.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap sm:flex-col lg:flex-row items-center gap-2 shrink-0 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-[#1b2d39]/60">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[11px] font-bold">
+                                    <span class="material-symbols-outlined text-[14px]">lock</span>
+                                    <span>JCER Verified</span>
+                                </div>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold">
+                                    <span class="size-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    <span>Shield Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Five Security Tool Cards: Your Security Toolkit -->
+                    <div>
+                        <!-- Section Header -->
+                        <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-1">
+                            <div>
+                                <h3 class="text-lg sm:text-xl font-black text-white tracking-tight">Your Security Toolkit</h3>
+                                <p class="text-slate-400 text-xs sm:text-sm font-medium mt-0.5">
+                                    Choose a security tool to check suspicious content before you trust it.
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2 text-[11px] font-medium shrink-0">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-bold">
+                                    <span class="size-1.5 rounded-full bg-cyan-400"></span> 3 Available
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-400 font-semibold">
+                                    2 Coming Soon
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card Grid: Desktop 3 first row, 2 second row (6-col grid: 2 cols each, row 2 starts col 2 so centered) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+
+                            <!-- Card 1: Phishing Email Detector (Coming Soon) -->
+                            <div class="tab-trigger group bg-[#101b24] border border-[#1b2d39] hover:border-cyan-500/40 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between shadow-lg shadow-black/30 hover:shadow-[0_8px_30px_rgba(13,200,242,0.08)] hover:-translate-y-1 cursor-pointer md:col-span-1 lg:col-span-2 min-h-[290px]"
+                                data-tab="email">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-4">
+                                        <div class="size-12 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-slate-300 relative group-hover:border-cyan-500/40 transition-colors">
+                                            <span class="material-symbols-outlined text-[24px]">mark_email_unread</span>
+                                            <span class="material-symbols-outlined text-[13px] text-cyan-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-0.5 border border-[#1b2d39]">shield</span>
+                                        </div>
+                                        <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-800/80 border border-slate-700 text-slate-400 flex items-center gap-1.5">
+                                            <span class="size-1.5 rounded-full bg-slate-500"></span> Coming Soon
+                                        </span>
+                                    </div>
+                                    <h4 class="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                        Phishing Email Detector
+                                    </h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed font-normal">
+                                        Identify suspicious emails, impersonation attempts, and potentially fraudulent messages.
+                                    </p>
+                                </div>
+                                <div class="mt-5 pt-4 border-t border-[#1b2d39]/60">
+                                    <button type="button"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-[#14232e] group-hover:bg-[#1a2e3d] text-slate-300 group-hover:text-white border border-[#223947] group-hover:border-cyan-500/30 font-bold text-xs flex items-center justify-between transition-all cursor-pointer">
+                                        <span>Open Email Detector</span>
+                                        <span class="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: Fraudulent Website Checker (Available) -->
+                            <div class="tab-trigger group bg-[#101b24] border border-[#1b2d39] hover:border-cyan-500/50 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between shadow-lg shadow-black/30 hover:shadow-[0_8px_30px_rgba(13,200,242,0.12)] hover:-translate-y-1 cursor-pointer md:col-span-1 lg:col-span-2 min-h-[290px]"
+                                data-tab="url">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-4">
+                                        <div class="size-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 relative group-hover:shadow-[0_0_15px_rgba(13,200,242,0.3)] transition-all">
+                                            <span class="material-symbols-outlined text-[24px]">travel_explore</span>
+                                            <span class="material-symbols-outlined text-[13px] text-cyan-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-0.5 border border-cyan-500/40">shield</span>
+                                        </div>
+                                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center gap-1.5 shadow-[0_0_8px_rgba(13,200,242,0.2)]">
+                                            <span class="size-1.5 rounded-full bg-cyan-400 animate-pulse"></span> Available
+                                        </span>
+                                    </div>
+                                    <h4 class="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                        Fraudulent Website Checker
+                                    </h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed font-normal">
+                                        Check suspicious websites for potentially unsafe destinations and phishing indicators.
+                                    </p>
+                                </div>
+                                <div class="mt-5 pt-4 border-t border-[#1b2d39]/60">
+                                    <button type="button"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-cyan-500 group-hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-between shadow-[0_0_15px_rgba(13,200,242,0.25)] group-hover:shadow-[0_0_20px_rgba(13,200,242,0.45)] transition-all cursor-pointer">
+                                        <span>Check Website</span>
+                                        <span class="material-symbols-outlined text-[16px] text-slate-950 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Malicious Link Scanner (Coming Soon) -->
+                            <div class="tab-trigger group bg-[#101b24] border border-[#1b2d39] hover:border-cyan-500/40 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between shadow-lg shadow-black/30 hover:shadow-[0_8px_30px_rgba(13,200,242,0.08)] hover:-translate-y-1 cursor-pointer md:col-span-1 lg:col-span-2 min-h-[290px]"
+                                data-tab="link">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-4">
+                                        <div class="size-12 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center text-slate-300 relative group-hover:border-cyan-500/40 transition-colors">
+                                            <span class="material-symbols-outlined text-[24px]">link</span>
+                                            <span class="material-symbols-outlined text-[13px] text-amber-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-0.5 border border-[#1b2d39]">warning</span>
+                                        </div>
+                                        <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-800/80 border border-slate-700 text-slate-400 flex items-center gap-1.5">
+                                            <span class="size-1.5 rounded-full bg-slate-500"></span> Coming Soon
+                                        </span>
+                                    </div>
+                                    <h4 class="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                        Malicious Link Scanner
+                                    </h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed font-normal">
+                                        Review suspicious links received through messages, email, and social media.
+                                    </p>
+                                </div>
+                                <div class="mt-5 pt-4 border-t border-[#1b2d39]/60">
+                                    <button type="button"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-[#14232e] group-hover:bg-[#1a2e3d] text-slate-300 group-hover:text-white border border-[#223947] group-hover:border-cyan-500/30 font-bold text-xs flex items-center justify-between transition-all cursor-pointer">
+                                        <span>Open Link Scanner</span>
+                                        <span class="material-symbols-outlined text-[16px] text-slate-400 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: QR-Code Scam Detector (Available) -->
+                            <div class="tab-trigger group bg-[#101b24] border border-[#1b2d39] hover:border-cyan-500/50 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between shadow-lg shadow-black/30 hover:shadow-[0_8px_30px_rgba(13,200,242,0.12)] hover:-translate-y-1 cursor-pointer md:col-span-1 lg:col-span-2 lg:col-start-2 min-h-[290px]"
+                                data-tab="qrcode">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-4">
+                                        <div class="size-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 relative group-hover:shadow-[0_0_15px_rgba(13,200,242,0.3)] transition-all">
+                                            <span class="material-symbols-outlined text-[24px]">qr_code_scanner</span>
+                                            <span class="material-symbols-outlined text-[13px] text-cyan-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-0.5 border border-cyan-500/40">shield</span>
+                                        </div>
+                                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center gap-1.5 shadow-[0_0_8px_rgba(13,200,242,0.2)]">
+                                            <span class="size-1.5 rounded-full bg-cyan-400 animate-pulse"></span> Available
+                                        </span>
+                                    </div>
+                                    <h4 class="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                        QR-Code Scam Detector
+                                    </h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed font-normal">
+                                        Check QR codes before opening unfamiliar destinations or making payments.
+                                    </p>
+                                </div>
+                                <div class="mt-5 pt-4 border-t border-[#1b2d39]/60">
+                                    <button type="button"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-cyan-500 group-hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-between shadow-[0_0_15px_rgba(13,200,242,0.25)] group-hover:shadow-[0_0_20px_rgba(13,200,242,0.45)] transition-all cursor-pointer">
+                                        <span>Analyze QR Code</span>
+                                        <span class="material-symbols-outlined text-[16px] text-slate-950 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Card 5: Screenshot Scam Detector (Available) -->
+                            <div class="tab-trigger group bg-[#101b24] border border-[#1b2d39] hover:border-cyan-500/50 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between shadow-lg shadow-black/30 hover:shadow-[0_8px_30px_rgba(13,200,242,0.12)] hover:-translate-y-1 cursor-pointer md:col-span-2 md:max-w-md md:mx-auto md:w-full lg:max-w-none lg:mx-0 lg:col-span-2 min-h-[290px]"
+                                data-tab="screenshot">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-4">
+                                        <div class="size-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 relative group-hover:shadow-[0_0_15px_rgba(13,200,242,0.3)] transition-all">
+                                            <span class="material-symbols-outlined text-[24px]">crop_free</span>
+                                            <span class="material-symbols-outlined text-[13px] text-cyan-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-0.5 border border-cyan-500/40">shield</span>
+                                        </div>
+                                        <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center gap-1.5 shadow-[0_0_8px_rgba(13,200,242,0.2)]">
+                                            <span class="size-1.5 rounded-full bg-cyan-400 animate-pulse"></span> Available
+                                        </span>
+                                    </div>
+                                    <h4 class="text-base font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                        Screenshot Scam Detector
+                                    </h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed font-normal">
+                                        Inspect suspicious messages, payment screenshots, and receipts for potential fraud indicators.
+                                    </p>
+                                </div>
+                                <div class="mt-5 pt-4 border-t border-[#1b2d39]/60">
+                                    <button type="button"
+                                        class="w-full py-2.5 px-4 rounded-xl bg-cyan-500 group-hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-between shadow-[0_0_15px_rgba(13,200,242,0.25)] group-hover:shadow-[0_0_20px_rgba(13,200,242,0.45)] transition-all cursor-pointer">
+                                        <span>Analyze Screenshot</span>
+                                        <span class="material-symbols-outlined text-[16px] text-slate-950 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Cyber Safety Tips Section -->
+                    <div class="mt-12 pt-8 border-t border-[#1b2d39]/80">
+                        <div class="mb-5 flex items-center gap-2.5 px-1">
+                            <div class="size-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                                <span class="material-symbols-outlined text-[18px]">verified</span>
+                            </div>
+                            <div>
+                                <h3 class="text-base sm:text-lg font-bold text-white tracking-tight">Cyber Safety Tips</h3>
+                                <p class="text-slate-400 text-xs">Essential security practices for campus digital safety</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <!-- Tip 1 -->
+                            <div class="bg-[#101b24] border border-[#1b2d39] rounded-xl p-4 flex flex-col gap-2 hover:border-cyan-500/30 transition-all">
+                                <div class="size-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-[18px]">lock_reset</span>
+                                </div>
+                                <h4 class="text-xs font-bold text-white">Password & OTP</h4>
+                                <p class="text-[11px] text-slate-300 leading-relaxed font-normal">
+                                    Never share your password or OTP.
+                                </p>
+                            </div>
+
+                            <!-- Tip 2 -->
+                            <div class="bg-[#101b24] border border-[#1b2d39] rounded-xl p-4 flex flex-col gap-2 hover:border-cyan-500/30 transition-all">
+                                <div class="size-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-[18px]">link</span>
+                                </div>
+                                <h4 class="text-xs font-bold text-white">Verify Links</h4>
+                                <p class="text-[11px] text-slate-300 leading-relaxed font-normal">
+                                    Verify suspicious links before opening them.
+                                </p>
+                            </div>
+
+                            <!-- Tip 3 -->
+                            <div class="bg-[#101b24] border border-[#1b2d39] rounded-xl p-4 flex flex-col gap-2 hover:border-cyan-500/30 transition-all">
+                                <div class="size-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+                                </div>
+                                <h4 class="text-xs font-bold text-white">QR Destinations</h4>
+                                <p class="text-[11px] text-slate-300 leading-relaxed font-normal">
+                                    Check QR-code destinations before making payments.
+                                </p>
+                            </div>
+
+                            <!-- Tip 4 -->
+                            <div class="bg-[#101b24] border border-[#1b2d39] rounded-xl p-4 flex flex-col gap-2 hover:border-cyan-500/30 transition-all">
+                                <div class="size-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                                </div>
+                                <h4 class="text-xs font-bold text-white">Receipt Verification</h4>
+                                <p class="text-[11px] text-slate-300 leading-relaxed font-normal">
+                                    Verify payment receipts through your banking application.
+                                </p>
+                            </div>
+
+                            <!-- Tip 5 -->
+                            <div class="bg-[#101b24] border border-[#1b2d39] rounded-xl p-4 flex flex-col gap-2 hover:border-cyan-500/30 transition-all sm:col-span-2 lg:col-span-1">
+                                <div class="size-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
+                                    <span class="material-symbols-outlined text-[18px]">report</span>
+                                </div>
+                                <h4 class="text-xs font-bold text-white">Report Scams</h4>
+                                <p class="text-[11px] text-slate-300 leading-relaxed font-normal">
+                                    Report suspicious emails or messages to the appropriate authority.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> <!-- End Dashboard Panel -->
+
+                <!-- ================= SCANNER WRAPPER ================= -->
+                <div id="scanner-wrapper" class="pb-20 max-w-5xl mx-auto hidden animate-in fade-in duration-300">
+                    <button
+                        class="mb-6 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-cyan-400 transition-colors tab-trigger cursor-pointer"
+                        data-tab="dashboard">
+                        <span class="material-symbols-outlined text-[18px]">arrow_back</span> Back to Security Tools
+                    </button>
+
+                    <!-- Tool Selection Tabs (Visible on Desktop & Mobile) -->
+                    <div
+                        class="flex overflow-x-auto gap-2 mb-8 p-1.5 bg-[#0e171e] border border-[#1b2d39] rounded-xl w-fit max-w-full drop-shadow-md hide-scrollbar">
+                        <button
+                            class="px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap tool-tab-btn tab-trigger cursor-pointer flex items-center gap-1.5"
+                            data-tab="email">
+                            <span class="material-symbols-outlined text-[15px]">mark_email_unread</span>
+                            <span>Phishing Email</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-normal">Soon</span>
+                        </button>
+                        <button
+                            class="px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap tool-tab-btn tab-trigger cursor-pointer flex items-center gap-1.5"
+                            data-tab="url">
+                            <span class="material-symbols-outlined text-[15px]">travel_explore</span>
+                            <span>Website Checker</span>
+                        </button>
+                        <button
+                            class="px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap tool-tab-btn tab-trigger cursor-pointer flex items-center gap-1.5"
+                            data-tab="link">
+                            <span class="material-symbols-outlined text-[15px]">link</span>
+                            <span>Link Scanner</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-normal">Soon</span>
+                        </button>
+                        <button
+                            class="px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap tool-tab-btn tab-trigger cursor-pointer flex items-center gap-1.5"
+                            data-tab="qrcode">
+                            <span class="material-symbols-outlined text-[15px]">qr_code_scanner</span>
+                            <span>QR Detector</span>
+                        </button>
+                        <button
+                            class="px-3.5 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap tool-tab-btn tab-trigger cursor-pointer flex items-center gap-1.5"
+                            data-tab="screenshot">
+                            <span class="material-symbols-outlined text-[15px]">crop_free</span>
+                            <span>Screenshot Detector</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12" id="scanner-grid-container">
+                        <!-- Left: Input tools -->
+                        <div class="lg:col-span-6 space-y-6">
+
+                            <!-- Screenshot Scanning Block -->
+                            <div class="tab-panel hidden" id="panel-screenshot">
+                                <div class="flex flex-col gap-2 mb-8">
+                                    <h1 class="text-3xl lg:text-4xl font-black text-white tracking-tight"
+                                        id="main-hero-title-screenshot" data-i18n="screenshot_hero_title">Screenshot Scam Detector</h1>
+                                    <p class="text-slate-400 text-[14px] font-medium" id="main-hero-desc-screenshot" data-i18n="screenshot_hero_desc">
+                                        Verify payment receipts instantly to protect your business.</p>
+                                </div>
+
+                                <input type="file" id="screenshot-file" accept="image/*" hidden />
+                                <input type="file" id="screenshot-camera" accept="image/*" capture="environment"
+                                    hidden />
+
+                                <!-- Drop Zone with Buttons Inside -->
+                                <div id="screenshot-drop-zone"
+                                    class="border-2 border-dashed border-primary/40 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all min-h-[180px] mt-4">
+                                    <div
+                                        class="size-14 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                                        <span
+                                            class="material-symbols-outlined text-primary text-[28px]">cloud_upload</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <h4 class="text-sm font-bold text-white mb-1" data-i18n="upload_image">Upload Payment Receipt</h4>
+                                        <p class="text-xs text-slate-400" data-i18n="screenshot_card_desc">Drag and drop your screenshot here or use the
+                                            camera to scan a physical copy.</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-4 w-full justify-center mt-6">
+                                    <button type="button"
+                                        class="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-[#0b1319] font-bold rounded-full hover:shadow-[0_0_20px_rgba(13,200,242,0.6)] transition-all text-[13px] w-full sm:w-auto"
+                                        id="screenshot-camera-btn">
+                                        <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+                                        <span data-i18n="camera_btn">Camera</span>
+                                    </button>
+                                    <button type="button"
+                                        class="flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1a2c32] text-white font-bold rounded-full hover:bg-[#20363d] transition-all text-[13px] w-full sm:w-auto"
+                                        id="screenshot-upload-btn" data-i18n="browse_files">
+                                        Browse Files
+                                    </button>
+                                </div>
+
+                                <!-- Image Preview Box -->
+                                <div class="relative w-full rounded-2xl overflow-hidden mt-6 border border-[#20363d] bg-[#0b1319] shadow-2xl hidden group"
+                                    id="preview-container">
+                                    <img id="screenshot-preview"
+                                        class="w-full h-auto object-cover max-h-[350px] opacity-80 mix-blend-screen"
+                                        alt="Preview" />
+                                    <!-- Scan Line -->
+                                    <div class="absolute inset-0 pointer-events-none overflow-hidden hidden"
+                                        id="scanning-overlay">
+                                        <div class="scanning-line absolute w-full top-0 animate-scan"></div>
+                                    </div>
+                                    <!-- Bottom Bar -->
+                                    <div
+                                        class="absolute inset-x-3 bottom-3 bg-[#20363d]/95 backdrop-blur-md rounded-xl p-3 flex items-center justify-between border border-[#2a454d]">
+                                        <div class="flex items-center gap-3 text-white">
+                                            <div
+                                                class="size-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                                                <span class="material-symbols-outlined text-[18px]">image</span>
+                                            </div>
+                                            <span class="text-xs font-bold truncate max-w-[150px] tracking-wider"
+                                                id="screenshot-filename">receipt_1024.jpg</span>
+                                        </div>
+                                        <button
+                                            class="text-[11px] font-black text-primary uppercase tracking-[0.1em] hover:text-white transition-colors px-3 py-1.5"
+                                            id="screenshot-change-btn">CHANGE</button>
+                                    </div>
+                                </div>
+
+                                <!-- Analyze Button -->
+                                <button
+                                    class="w-full mt-6 rounded-2xl h-14 bg-primary text-[#0b1319] font-black tracking-[0.1em] text-[13px] uppercase flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(13,200,242,0.2)] hover:shadow-[0_4px_25px_rgba(13,200,242,0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                                    id="screenshot-analyze-btn" disabled>
+                                    <span class="material-symbols-outlined text-[20px]">analytics</span> <span data-i18n="analyze">ANALYZE RECEIPT</span>
+                                </button>
+                            </div>
+
+                            <!-- QR Code Scanning Block -->
+                            <div class="tab-panel hidden" id="panel-qrcode">
+                                <div class="flex flex-col gap-2 mb-8">
+                                    <h1 class="text-3xl lg:text-4xl font-black text-white tracking-tight"
+                                        id="main-hero-title-qrcode">QR Code Security Scanner</h1>
+                                    <p class="text-slate-400 text-[14px] font-medium" id="main-hero-desc-qrcode">Scan or
+                                        upload a QR code to verify its payment destination.</p>
+                                </div>
+
+                                <input type="file" id="qr-file" accept="image/*" hidden />
+                                <input type="file" id="qr-camera" accept="image/*" capture="environment" hidden />
+
+                                <!-- Drop Zone with Buttons Inside -->
+                                <div id="qr-drop-zone"
+                                    class="border-2 border-dashed border-primary/40 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/70 hover:bg-primary/5 transition-all min-h-[180px] mt-4">
+                                    <div
+                                        class="size-14 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                                        <span
+                                            class="material-symbols-outlined text-primary text-[28px]">qr_code_scanner</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <h4 class="text-sm font-bold text-white mb-1" data-i18n="qrcode_tab">Upload QR Code</h4>
+                                        <p class="text-xs text-slate-400" data-i18n="qrcode_card_desc">Drag and drop a QR code image or use the
+                                            camera to scan.</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-4 w-full justify-center mt-6">
+                                    <button type="button"
+                                        class="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-[#0b1319] font-bold rounded-full hover:shadow-[0_0_20px_rgba(13,200,242,0.6)] transition-all text-[13px] w-full sm:w-auto"
+                                        id="qr-camera-btn">
+                                        <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+                                        <span data-i18n="camera_btn">Camera</span>
+                                    </button>
+                                    <button type="button"
+                                        class="flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1a2c32] text-white font-bold rounded-full hover:bg-[#20363d] transition-all text-[13px] w-full sm:w-auto"
+                                        id="qr-upload-btn" data-i18n="browse_files">
+                                        Browse Files
+                                    </button>
+                                </div>
+
+                                <!-- Image Preview Box -->
+                                <div class="relative w-full rounded-2xl overflow-hidden mt-6 border border-[#20363d] bg-[#0b1319] shadow-2xl hidden group"
+                                    id="qr-preview-container">
+                                    <img id="qr-preview"
+                                        class="w-full h-auto object-cover max-h-[350px] opacity-80 mix-blend-screen"
+                                        alt="Preview" />
+                                    <!-- Scan Line -->
+                                    <div class="absolute inset-0 pointer-events-none overflow-hidden hidden"
+                                        id="qr-scanning-overlay">
+                                        <div class="scanning-line absolute w-full top-0 animate-scan"></div>
+                                    </div>
+                                    <!-- Bottom Bar -->
+                                    <div
+                                        class="absolute inset-x-3 bottom-3 bg-[#20363d]/95 backdrop-blur-md rounded-xl p-3 flex items-center justify-between border border-[#2a454d]">
+                                        <div class="flex items-center gap-3 text-white">
+                                            <div
+                                                class="size-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                                                <span class="material-symbols-outlined text-[18px]">qr_code</span>
+                                            </div>
+                                            <span class="text-xs font-bold truncate max-w-[150px] tracking-wider"
+                                                id="qr-filename">qrcode_scan.jpg</span>
+                                        </div>
+                                        <button
+                                            class="text-[11px] font-black text-primary uppercase tracking-[0.1em] hover:text-white transition-colors px-3 py-1.5"
+                                            id="qr-change-btn">CHANGE</button>
+                                    </div>
+                                </div>
+
+                                <!-- Analyze Button -->
+                                <button
+                                    class="w-full mt-6 rounded-2xl h-14 bg-primary text-[#0b1319] font-black tracking-[0.1em] text-[13px] uppercase flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(13,200,242,0.2)] hover:shadow-[0_4px_25px_rgba(13,200,242,0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                                    id="qr-analyze-btn" disabled>
+                                    <span class="material-symbols-outlined text-[20px]">analytics</span> <span data-i18n="analyze">VERIFY
+                                    DESTINATION</span>
+                                </button>
+                            </div>
+
+                            <!-- URL Scanning Block -->
+                            <div class="tab-panel hidden" id="panel-url">
+                                <div class="flex flex-col gap-2 mb-8">
+                                    <h1 class="text-3xl lg:text-4xl font-black text-white tracking-tight"
+                                        id="main-hero-title-url">Website Phishing <span
+                                            class="text-primary block mt-1">Detector</span></h1>
+                                    <p class="text-slate-400 text-[14px] font-medium" id="main-hero-desc-url">Instant
+                                        deep-scan analysis for malicious URLs. Protect your digital identity with
+                                        AI-powered threat intelligence.</p>
+                                </div>
+
+                                <!-- Security Alert Banner -->
+                                <div id="url-security-alert"
+                                    class="flex bg-red-500/5 border border-red-500/20 rounded-2xl p-5 items-center gap-4 mb-8 shadow-lg">
+                                    <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-red-500 mb-0.5">Security Alert</h4>
+                                        <p class="text-xs text-slate-400 font-medium" id="url-alert-message">A high-risk
+                                            phishing campaign targeting banking credentials was detected 12 minutes ago.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- URL Input Box -->
+                                <div
+                                    class="bg-[#121f26] border border-[#1a2c32] p-6 lg:p-8 rounded-3xl shadow-xl space-y-6 relative overflow-hidden">
+                                    <label
+                                        class="block text-[11px] font-bold uppercase tracking-widest text-[#0dc8f2]/80">Enter
+                                        Website URL</label>
+
+                                    <div
+                                        class="relative group mt-2 flex flex-col md:flex-row items-stretch md:items-center gap-4 md:gap-0">
+                                        <div
+                                            class="absolute top-4 md:inset-y-0 left-4 flex items-center pointer-events-none md:h-auto z-10">
+                                            <span
+                                                class="material-symbols-outlined text-[#0dc8f2] group-focus-within:scale-110 transition-transform text-xl">link</span>
+                                        </div>
+                                        <input id="url-input"
+                                            class="w-full bg-[#0b1319] border border-[#1a2c32] rounded-2xl py-4 pl-12 pr-4 md:pr-40 focus:border-[#0dc8f2] focus:ring-1 focus:ring-[#0dc8f2] transition-all text-sm outline-none placeholder:text-slate-600 text-white font-medium shadow-inner"
+                                            placeholder="https://secure-login-portal.com" type="text" />
+
+                                        <div class="md:absolute md:inset-y-2 md:right-2 flex items-center mt-3 md:mt-0">
+                                            <button
+                                                class="w-full md:w-auto h-12 px-8 bg-[#0dc8f2] text-[#0b1319] font-black rounded-xl hover:shadow-[0_0_20px_rgba(13,200,242,0.4)] hover:brightness-110 transition-all uppercase tracking-[0.15em] text-[13px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                                id="url-analyze-btn">
+                                                SCAN
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Live analysis progress block -->
+                                    <div class="mt-8 pt-6 border-t border-[#1a2c32] hidden" id="url-progress-container">
+                                        <h4 class="text-[13px] font-bold text-white mb-6 flex items-center gap-2"><span
+                                                class="material-symbols-outlined text-[#0dc8f2] text-[18px]">analytics</span>
+                                            Live Analysis Progress</h4>
+
+                                        <div class="space-y-6 pl-2 relative">
+                                            <!-- Vertical Line -->
+                                            <div class="absolute left-[15px] top-4 bottom-4 w-px bg-[#1a2c32] -z-10">
+                                            </div>
+
+                                            <div class="flex gap-4 items-start">
+                                                <div class="size-6 rounded-full bg-[#121f26] border border-[#0dc8f2] flex items-center justify-center shrink-0 z-10"
+                                                    id="step1-icon">
+                                                    <span
+                                                        class="material-symbols-outlined text-[14px] text-[#0dc8f2] animate-spin">sync</span>
+                                                </div>
+                                                <div>
+                                                    <p class="text-[13px] font-bold text-white">SSL Certificate
+                                                        Validation</p>
+                                                    <p class="text-[11px] text-[#0dc8f2] mt-1" id="step1-text">
+                                                        Validating...</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex gap-4 items-center">
+                                                <div class="size-6 rounded-full bg-[#0b1319] border border-[#1a2c32] flex items-center justify-center shrink-0 z-10"
+                                                    id="step2-icon">
+                                                    <span
+                                                        class="material-symbols-outlined text-[14px] text-slate-600">dns</span>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <div class="flex justify-between items-center mb-1.5">
+                                                        <p class="text-[13px] font-bold text-slate-400"
+                                                            id="step2-title">Domain Structure Analysis</p>
+                                                    </div>
+                                                    <div class="h-1 w-full bg-[#0b1319] rounded-full overflow-hidden hidden"
+                                                        id="step2-bar-container">
+                                                        <div class="h-full bg-[#0dc8f2] w-[0%] rounded-full relative overflow-hidden transition-all duration-300"
+                                                            id="step2-bar">
+                                                            <div class="absolute inset-0 bg-white/20 animate-pulse">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <p class="text-[11px] text-slate-600 mt-1 hidden" id="step2-text">
+                                                        Queued...</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex gap-4 items-start">
+                                                <div class="size-6 rounded-full bg-[#0b1319] border border-[#1a2c32] flex items-center justify-center shrink-0 z-10"
+                                                    id="step3-icon">
+                                                    <span
+                                                        class="material-symbols-outlined text-[14px] text-slate-600">database</span>
+                                                </div>
+                                                <div>
+                                                    <p class="text-[13px] font-bold text-slate-400" id="step3-title">
+                                                        Database Reputation Check</p>
+                                                    <p class="text-[11px] text-slate-600 mt-1" id="step3-text">Queued...
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Footer Stats -->
+                                <div
+                                    class="mt-10 pt-6 border-t border-[#1a2c32] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                    <div class="flex items-center gap-8">
+                                        <div>
+                                            <p class="text-[9px] uppercase text-slate-500 font-bold tracking-widest">
+                                                Total Scanned</p>
+                                            <p class="text-xl font-black text-white">12.4M+</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-[9px] uppercase text-slate-500 font-bold tracking-widest">
+                                                Threats Neutralized</p>
+                                            <p class="text-xl font-black text-primary">892,104</p>
+                                        </div>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 italic font-medium">"Protecting the web, one
+                                        link at a time."</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Result Output Area -->
+                        <div class="lg:col-span-6 space-y-6">
+                            <div id="result-container" class="hidden"></div>
+
+                            <div id="default-tips"
+                                class="rounded-2xl p-6 bg-slate-card border border-border-color shadow-lg">
+                                <h3
+                                    class="text-[11px] font-bold text-primary mb-5 flex items-center gap-2 uppercase tracking-widest" data-i18n="verification_tips_title">
+                                    <span class="material-symbols-outlined text-lg">lightbulb</span> Verification Tips
+                                </h3>
+                                <ul class="space-y-4 text-[13px] text-slate-300 font-medium leading-relaxed">
+                                    <li class="flex gap-3"><span class="text-primary mt-[2px] opacity-70">•</span> <span data-i18n="tip_ml_fraud">High
+                                        risk scores indicate ML-confirmed patterns of fraud.</span></li>
+                                    <li class="flex gap-3"><span class="text-primary mt-[2px] opacity-70">•</span>
+                                        <span data-i18n="tip_manual_check">Always check your bank manually regardless of the scan output.</span></li>
+                                    <li class="flex gap-3"><span class="text-primary mt-[2px] opacity-70">•</span> <span data-i18n="tip_reporting">Use
+                                        the reporting feature in your bank app if you encounter domains mimicking
+                                        banking layouts.</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder Module: Phishing Email Detector -->
+                    <div class="tab-panel hidden max-w-2xl mx-auto py-8 text-center animate-in fade-in duration-300" id="panel-email">
+                        <div class="bg-[#101b24] border border-[#1b2d39] rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+                            <div class="size-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-6 shadow-[0_0_25px_rgba(13,200,242,0.15)] relative">
+                                <span class="material-symbols-outlined text-4xl">mark_email_unread</span>
+                                <span class="material-symbols-outlined text-base text-cyan-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-1 border border-cyan-500/40">shield</span>
+                            </div>
+
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">
+                                <span class="size-1.5 rounded-full bg-slate-500"></span> Coming Soon
+                            </div>
+
+                            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-3">Phishing Email Detector</h2>
+                            <p class="text-slate-300 text-sm sm:text-base font-medium max-w-lg mx-auto mb-8 leading-relaxed">
+                                Email analysis will be available in a future update.
+                            </p>
+
+                            <div class="bg-[#0b1319]/70 border border-[#1b2d39] rounded-xl p-4 text-left max-w-md mx-auto mb-8">
+                                <p class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[15px]">info</span> Planned Capabilities
+                                </p>
+                                <ul class="text-xs text-slate-400 space-y-2">
+                                    <li class="flex items-start gap-2">
+                                        <span class="size-1 rounded-full bg-cyan-400 mt-1.5 shrink-0"></span>
+                                        <span>Institutional email sender impersonation check</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="size-1 rounded-full bg-cyan-400 mt-1.5 shrink-0"></span>
+                                        <span>Header spoofing and SPF / DKIM verification</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="size-1 rounded-full bg-cyan-400 mt-1.5 shrink-0"></span>
+                                        <span>Suspicious links and coercive message tone detection</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <button type="button"
+                                class="tab-trigger inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(13,200,242,0.3)]"
+                                data-tab="dashboard">
+                                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                                <span>Back to Security Tools</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder Module: Malicious Link Scanner -->
+                    <div class="tab-panel hidden max-w-2xl mx-auto py-8 text-center animate-in fade-in duration-300" id="panel-link">
+                        <div class="bg-[#101b24] border border-[#1b2d39] rounded-2xl p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+                            <div class="size-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mx-auto mb-6 shadow-[0_0_25px_rgba(13,200,242,0.15)] relative">
+                                <span class="material-symbols-outlined text-4xl">link</span>
+                                <span class="material-symbols-outlined text-base text-amber-400 absolute -bottom-1 -right-1 bg-[#101b24] rounded-full p-1 border border-[#1b2d39]">warning</span>
+                            </div>
+
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">
+                                <span class="size-1.5 rounded-full bg-slate-500"></span> Coming Soon
+                            </div>
+
+                            <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight mb-3">Malicious Link Scanner</h2>
+                            <p class="text-slate-300 text-sm sm:text-base font-medium max-w-lg mx-auto mb-8 leading-relaxed">
+                                Advanced malicious-link scanning will be available in a future update.
+                            </p>
+
+                            <div class="bg-[#0b1319]/70 border border-[#1b2d39] rounded-xl p-4 text-left max-w-md mx-auto mb-8">
+                                <p class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[15px]">info</span> Planned Capabilities
+                                </p>
+                                <ul class="text-xs text-slate-400 space-y-2">
+                                    <li class="flex items-start gap-2">
+                                        <span class="size-1 rounded-full bg-cyan-400 mt-1.5 shrink-0"></span>
+                                        <span>SMS and messaging link redirect unmasking</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="size-1 rounded-full bg-cyan-400 mt-1.5 shrink-0"></span>
+                                        <span>Shortened link expansion & sandbox payload scanning</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="size-1 rounded-full bg-cyan-400 mt-1.5 shrink-0"></span>
+                                        <span>Cross-reference with campus threat intelligence</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <button type="button"
+                                class="tab-trigger inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(13,200,242,0.3)]"
+                                data-tab="dashboard">
+                                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                                <span>Back to Security Tools</span>
+                            </button>
+                        </div>
+                    </div>
+                </div> <!-- End Scanner Interfaces -->
+
+            </main>
+
+            <!-- Mobile Bottom Navigation -->
+            <nav
+                class="lg:hidden shrink-0 w-full bg-[#091117] border-t border-[#182834] flex justify-around p-2 pb-safe z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+                <button class="flex flex-col items-center gap-1 p-2 tab-trigger active text-cyan-400 cursor-pointer"
+                    data-tab="dashboard">
+                    <span class="material-symbols-outlined text-[20px] transition-colors">space_dashboard</span>
+                    <span class="text-[9px] font-bold tracking-widest transition-colors">DASHBOARD</span>
+                </button>
+                <button class="flex flex-col items-center gap-1 p-2 tab-trigger text-slate-400 hover:text-white cursor-pointer" data-tab="url">
+                    <span class="material-symbols-outlined text-[20px] transition-colors">travel_explore</span>
+                    <span class="text-[9px] font-bold tracking-widest transition-colors">WEBSITE</span>
+                </button>
+                <button class="flex flex-col items-center gap-1 p-2 tab-trigger text-slate-400 hover:text-white cursor-pointer" data-tab="qrcode">
+                    <span class="material-symbols-outlined text-[20px] transition-colors">qr_code_scanner</span>
+                    <span class="text-[9px] font-bold tracking-widest transition-colors">QR CODE</span>
+                </button>
+                <button class="flex flex-col items-center gap-1 p-2 tab-trigger text-slate-400 hover:text-white cursor-pointer" data-tab="screenshot">
+                    <span class="material-symbols-outlined text-[20px] transition-colors">crop_free</span>
+                    <span class="text-[9px] font-bold tracking-widest transition-colors">SCREENSHOT</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Result Template (Tailwind Card) -->
+    <template id="result-template">
+        <div
+            class="bg-slate-card rounded-2xl p-6 lg:p-8 flex flex-col gap-8 border border-primary/30 shadow-2xl shadow-primary/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden h-full">
+            <div class="absolute inset-0 bg-primary/5 rounded-2xl pointer-events-none"></div>
+
+            <div class="flex flex-col md:flex-row gap-8 items-start md:items-center relative z-10 w-full mb-4">
+                <div class="relative size-32 flex-shrink-0 flex items-center justify-center">
+                    <svg class="size-full -rotate-90" viewbox="0 0 100 100">
+                        <circle class="text-[#1a2c32]" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor"
+                            stroke-width="8"></circle>
+                        <circle id="meter-fill" class="text-primary transition-all duration-1000 ease-out" cx="50"
+                            cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2"
+                            stroke-dashoffset="251.2" stroke-width="8"
+                            style="filter: drop-shadow(0 0 6px rgba(13,200,242,0.4))"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pt-1">
+                        <span id="meter-score" class="text-3xl font-black text-white leading-none">0</span>
+                        <span class="text-[9px] text-primary font-bold uppercase tracking-[0.2em] mt-1"
+                            data-i18n="risk_score">Risk</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <h2 class="text-2xl font-black text-white uppercase tracking-wider">Analysis Complete</h2>
+                    <div id="status-badge"
+                        class="px-5 py-2 w-fit rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-2 transition-colors border shadow-lg shadow-black/20">
+                        <span id="status-icon" class="material-symbols-outlined text-base">check_circle</span>
+                        <span id="status-text">Safe</span>
+                    </div>
+
+                    <div id="report-section" class="mt-2 flex flex-col gap-3 hidden">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-red-500 text-[18px]">report</span>
+                            <span id="report-count-text" class="text-[11px] font-bold text-slate-400">0 reports as
+                                scam</span>
+                        </div>
+                        <button id="report-btn"
+                            class="w-fit px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">flag</span> Report as Scam
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 z-10 w-full flex-grow">
+                <!-- Left Column: Findings -->
+                <div class="w-full space-y-4" id="flaws-section">
+                    <h3
+                        class="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 pb-2 border-b border-border-color flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-primary">troubleshoot</span> Deep Scan
+                        Findings
+                    </h3>
+                    <div class="space-y-3" id="reasons-list"></div>
+                </div>
+
+                <!-- Right Column: Data -->
+                <div class="w-full space-y-4 hidden flex-col" id="data-section">
+                    <h3
+                        class="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 pb-2 border-b border-border-color flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-primary">data_object</span> Extracted
+                        Details
+                    </h3>
+                    <div class="grid grid-cols-1 gap-3 bg-[#0b1319]/50 rounded-xl p-4 border border-[#1a2c32]"
+                        id="fields-grid"></div>
+                </div>
+            </div>
+
+            <div
+                class="w-full p-4 md:p-5 rounded-xl bg-[#0b1319] border border-border-color z-10 mt-auto flex items-start gap-4">
+                <span class="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5">policy</span>
+                <p class="text-[12px] text-slate-300 leading-relaxed font-medium" id="evidence-summary"></p>
+            </div>
+        </div>
+    </template>
+
+    <!-- Camera Modal -->
+    <div id="camera-modal" class="fixed inset-0 z-[100] bg-black hidden flex-col items-center justify-center p-4">
+        <div class="relative w-full max-w-2xl">
+            <video id="camera-video" class="w-full h-auto rounded-3xl shadow-2xl border border-primary/20 bg-[#0b1319]"
+                autoplay playsinline muted></video>
+            <div id="camera-loading"
+                class="absolute inset-0 flex flex-col items-center justify-center bg-[#0b1319] rounded-3xl z-[-1]">
+                <span class="material-symbols-outlined text-primary text-5xl animate-spin">sync</span>
+                <p class="mt-4 text-primary text-xs font-black uppercase tracking-widest">Initializing Camera...</p>
+            </div>
+        </div>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+
+        <div class="mt-8 flex items-center gap-4">
+            <button id="camera-capture-btn"
+                class="size-20 rounded-full bg-white flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 transition-all">
+                <div class="size-16 rounded-full border-4 border-[#0b1319] bg-white"></div>
+            </button>
+
+            <button id="camera-switch-btn"
+                class="size-14 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all hidden">
+                <span class="material-symbols-outlined text-2xl">cached</span>
+            </button>
+
+            <button id="camera-close-btn"
+                class="size-14 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all group">
+                <span class="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">close</span>
+            </button>
+        </div>
+
+        <button id="camera-fallback-btn"
+            class="mt-6 text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:text-white transition-colors py-2 px-4 border border-primary/20 rounded-lg bg-primary/5">
+            Use File Upload Instead
+        </button>
+
+        <p class="mt-6 text-white/50 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary animate-pulse">videocam</span> Live Scanning Mode
+        </p>
+    </div>
+
+    <script src="/static/js/auth.js?v=3"></script>
+    <script src="/static/js/i18n.js?v=3"></script>
+    <script src="/static/js/camera.js?v=3"></script>
+    <script src="/static/js/app.js?v=3"></script>
+    <script src="/static/js/screenshot.js?v=3"></script>
+    <script src="/static/js/qrcode.js?v=3"></script>
+    <script src="/static/js/url.js?v=3"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js?v=3').then(function(reg) {
+                if (reg && reg.update) {
+                    reg.update();
+                }
+            }).catch(function(err) {
+                console.warn('SW registration:', err);
+            });
+        }
+    </script>
+</body>
+
+</html>
