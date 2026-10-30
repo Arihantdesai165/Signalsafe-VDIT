@@ -120,7 +120,7 @@ export default function CyberAdminDatasetManagement() {
   };
 
   return (
-    <div style={{ maxWidth: '1080px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Navigation & Header */}
       <div>
         <button

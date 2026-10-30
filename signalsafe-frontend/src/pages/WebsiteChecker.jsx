@@ -43,7 +43,7 @@ export default function WebsiteChecker() {
   };
 
   return (
-    <div style={{ maxWidth: '880px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Back button and page title */}
       <div>
         <button
