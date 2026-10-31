@@ -30,7 +30,7 @@ except ImportError:
 try:
     from pyzbar.pyzbar import decode as pyzbar_decode
     _HAS_PYZBAR = True
-except ImportError:
+except (ImportError, OSError, Exception):
     _HAS_PYZBAR = False
 
 # ---------------------------------------------------------------------------

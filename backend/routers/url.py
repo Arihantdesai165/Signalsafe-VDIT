@@ -84,3 +84,13 @@ async def report_url_endpoint(
         "url": request.url,
         "report_count": new_count,
     }
+
+
+@router.post("/predict")
+async def predict_url_alias_endpoint(request: URLRequest):
+    """
+    Direct ML URL prediction alias on /api/url/predict.
+    Executes trained Linear SVM classification without requiring session auth.
+    """
+    from ..services.ml_url_service import predict_url_safety
+    return predict_url_safety(request.url)

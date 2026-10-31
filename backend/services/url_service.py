@@ -184,25 +184,25 @@ def analyze_url(url: str) -> dict:
             reasons.append(f"Domain is very new (created {domain_age} days ago).")
             evidence_points += 1
 
-    # ML-Based Refinement
+    # ML-Based Refinement using Linear SVM Model
     ml_probability = 0
-    if os.path.exists(MODEL_PATH):
-        try:
-            with open(MODEL_PATH, 'rb') as f:
-                model = pickle.load(f)
-            features = np.array([extract_url_features(url)], dtype=np.float32)
-            ml_probability = model.predict_proba(features)[0][1]
-            
-            # If ML is very confident (>80%), add a significant boost
-            if ml_probability > 0.8:
-                risk_score = max(risk_score, 85)
-                reasons.append("ML Analysis: URL matches high-confidence phishing patterns.")
-            elif ml_probability > 0.5:
-                risk_score += 20
-                reasons.append("ML Analysis: Technical features suggest a potential phishing attempt.")
-        except Exception as e:
-            # Fallback to rules only if ML fails
-            pass
+    ml_classification = "Legitimate"
+    ml_confidence_pct = 50.0
+    try:
+        from .ml_url_service import predict_url_safety
+        ml_eval = predict_url_safety(url)
+        ml_classification = ml_eval["classification"]
+        ml_confidence_pct = ml_eval["confidence_percentage"]
+        ml_probability = ml_eval["confidence"] if ml_eval["prediction"] == 1 else (1.0 - ml_eval["confidence"])
+        if ml_eval["prediction"] == 1:
+            risk_score = max(risk_score, ml_eval["risk_score"])
+            reasons.append(f"ML Analysis: URL classified as Malicious ({ml_confidence_pct}% confidence).")
+            evidence_points += 1
+        else:
+            if evidence_points == 0:
+                risk_score = min(risk_score, 10)
+    except Exception:
+        pass
     
     # Final Calibration
     final_score = clamp_score(risk_score)

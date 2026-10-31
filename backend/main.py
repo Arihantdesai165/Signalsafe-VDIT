@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 
-from .routers import screenshot, qrcode, url, auth, incidents, screenshot_datasets, college_qr
+from .routers import screenshot, qrcode, url, auth, incidents, screenshot_datasets, college_qr, security
 from .utils.translations import get_all_translations
 
 # Resolve paths - signalsafe-frontend is the only active frontend
@@ -54,6 +54,7 @@ app.include_router(url.router)
 app.include_router(incidents.router)
 app.include_router(screenshot_datasets.router)
 app.include_router(college_qr.router)
+app.include_router(security.router)
 
 
 # Translation endpoint

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import RiskScoreMeter from '../components/common/RiskScoreMeter';
 
 export default function LinkScanner() {
   const navigate = useNavigate();
@@ -9,27 +8,75 @@ export default function LinkScanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [reportSuccess, setReportSuccess] = useState(null);
+
+  const validateInput = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return 'Please paste or enter a suspicious link to scan.';
+    }
+    if (trimmed.length > 2048) {
+      return 'URL exceeds the maximum allowed length of 2048 characters.';
+    }
+    return null;
+  };
 
   const handleScan = async (e) => {
-    e.preventDefault();
-    if (!link.trim()) return;
+    if (e) e.preventDefault();
+    const valError = validateInput(link);
+    if (valError) {
+      setErrorMessage(valError);
+      return;
+    }
 
     setIsScanning(true);
     setErrorMessage(null);
+    setReportSuccess(null);
+    setResult(null);
+
     try {
-      const data = await api.analyzeMaliciousLink(link);
+      const data = await api.predictUrlSafety(link, 'link');
       setResult(data);
     } catch (err) {
       console.error('Link scan error:', err);
-      setErrorMessage(err.message || 'Link analysis failed. Please verify the URL structure.');
+      setErrorMessage(err.message || 'Link security scan failed. Please check your connection and retry.');
     } finally {
       setIsScanning(false);
     }
   };
 
+  const handleClear = () => {
+    setLink('');
+    setResult(null);
+    setErrorMessage(null);
+    setReportSuccess(null);
+  };
+
+  const handleQuickSample = (sampleUrl) => {
+    setLink(sampleUrl);
+    setResult(null);
+    setErrorMessage(null);
+    setReportSuccess(null);
+  };
+
+  const handleReportScam = async () => {
+    if (!link.trim()) return;
+    try {
+      const reportRes = await api.reportScamUrl(link);
+      setReportSuccess(`Incident logged successfully! Total community reports: ${reportRes.report_count || 1}`);
+      if (result) {
+        setResult({ ...result, report_count: reportRes.report_count });
+      }
+    } catch {
+      setErrorMessage('Failed to report link to the security queue. Please try again.');
+    }
+  };
+
+  const isMalicious = result && (result.prediction === 1 || result.classification === 'Malicious');
+
   return (
     <div style={{ maxWidth: '880px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Header */}
+      {/* Top Header & Navigation */}
       <div>
         <button
           onClick={() => navigate('/dashboard')}
@@ -42,8 +89,8 @@ export default function LinkScanner() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '42px',
-            height: '42px',
+            width: '44px',
+            height: '44px',
             borderRadius: '12px',
             backgroundColor: '#F3E8FF',
             border: '1px solid #DDD6FE',
@@ -56,16 +103,16 @@ export default function LinkScanner() {
           </div>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#202124', letterSpacing: '-0.02em' }}>
-              Malicious Link Checker
+              Malicious Link Scanner
             </h1>
             <p style={{ fontSize: '13.5px', color: '#6B7280' }}>
-              Inspect shortened links, redirection chains, and IP hosts received via SMS or messaging apps.
+              Inspect suspicious URLs and links received via SMS, WhatsApp, or email before clicking.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Form Card */}
+      {/* Link Input Form Card */}
       <div className="erp-card">
         <form onSubmit={handleScan}>
           <label style={{
@@ -77,19 +124,21 @@ export default function LinkScanner() {
             letterSpacing: '0.04em',
             marginBottom: '8px',
           }}>
-            Suspicious Link or Shortened URL
+            Suspicious Link or URL to Scan
           </label>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '260px' }}>
               <input
                 type="text"
                 className="erp-input"
-                placeholder="e.g. https://bit.ly/3xExamPass or raw IP link"
+                placeholder="e.g. https://bit.ly/3xSuspiciousLink or http://192.168.1.10/login"
                 value={link}
                 onChange={(e) => {
                   setLink(e.target.value);
                   setErrorMessage(null);
+                  setReportSuccess(null);
                 }}
+                disabled={isScanning}
                 required
               />
             </div>
@@ -97,7 +146,7 @@ export default function LinkScanner() {
               type="submit"
               className="btn-primary"
               disabled={isScanning || !link.trim()}
-              style={{ whiteSpace: 'nowrap' }}
+              style={{ whiteSpace: 'nowrap', padding: '0 20px' }}
             >
               {isScanning ? (
                 <>
@@ -107,13 +156,26 @@ export default function LinkScanner() {
               ) : (
                 <>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>troubleshoot</span>
-                  <span>Inspect Link</span>
+                  <span>Scan Link</span>
                 </>
               )}
             </button>
+            {link && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleClear}
+                disabled={isScanning}
+                style={{ padding: '0 14px' }}
+                title="Clear input"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </form>
 
+        {/* Quick Sample Test Buttons */}
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -123,26 +185,42 @@ export default function LinkScanner() {
           color: '#6B7280',
           alignItems: 'center',
         }}>
-          <span>Quick test:</span>
+          <span>Quick samples:</span>
           <button
             type="button"
-            onClick={() => setLink('https://google.com')}
+            onClick={() => handleQuickSample('https://www.wikipedia.org')}
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#1647A5',
+              color: '#16A34A',
               cursor: 'pointer',
               textDecoration: 'underline',
               fontSize: '12px',
               fontWeight: 600,
             }}
           >
-            Safe HTTPS Link
+            Legitimate HTTPS Link
           </button>
           <span>•</span>
           <button
             type="button"
-            onClick={() => setLink('http://192.168.1.100/login.php')}
+            onClick={() => handleQuickSample('http://sms-prize-claim-free-gift.xyz/verify?user=victim')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#DC2626',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
+            SMS Phishing Link
+          </button>
+          <span>•</span>
+          <button
+            type="button"
+            onClick={() => handleQuickSample('http://192.168.1.100/login.php')}
             style={{
               background: 'transparent',
               border: 'none',
@@ -153,31 +231,265 @@ export default function LinkScanner() {
               fontWeight: 600,
             }}
           >
-            Raw IP Address Link
+            WhatsApp IP Link
           </button>
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Error Banner with Retry */}
       {errorMessage && (
         <div style={{
-          padding: '12px 16px',
+          padding: '14px 18px',
           backgroundColor: '#FEF2F2',
           border: '1px solid #FECACA',
-          borderRadius: '10px',
+          borderRadius: '12px',
           color: '#DC2626',
+          fontSize: '13px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>error</span>
+            <span>{errorMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleScan()}
+            className="btn-secondary"
+            style={{ padding: '4px 12px', fontSize: '12px', color: '#DC2626', borderColor: '#FECACA' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Report Success Toast */}
+      {reportSuccess && (
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#F0FDF4',
+          border: '1px solid #BBF7D0',
+          borderRadius: '10px',
+          color: '#16A34A',
           fontSize: '13px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>error</span>
-          <span>{errorMessage}</span>
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>check_circle</span>
+          <span>{reportSuccess}</span>
         </div>
       )}
 
-      {/* Scan Results */}
-      {result && <RiskScoreMeter result={result} />}
+      {/* ML Prediction Result Display */}
+      {result && (
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          border: `1px solid ${isMalicious ? '#FECACA' : '#BBF7D0'}`,
+          borderRadius: '14px',
+          padding: '24px',
+          boxShadow: 'var(--shadow-card)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px',
+        }}>
+          {/* Header Status & Confidence Banner */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            paddingBottom: '18px',
+            borderBottom: `1px solid ${isMalicious ? '#FEE2E2' : '#DCFCE7'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: isMalicious ? '#FEF2F2' : '#F0FDF4',
+                border: `2px solid ${isMalicious ? '#F87171' : '#4ADE80'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isMalicious ? '#DC2626' : '#16A34A',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>
+                  {isMalicious ? 'dangerous' : 'verified_user'}
+                </span>
+              </div>
+              <div>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: isMalicious ? '#FEF2F2' : '#F0FDF4',
+                  color: isMalicious ? '#DC2626' : '#16A34A',
+                  border: `1px solid ${isMalicious ? '#FCA5A5' : '#86EFAC'}`,
+                  textTransform: 'uppercase',
+                }}>
+                  {result.status_label || (isMalicious ? 'MALICIOUS LINK' : 'NO MALICIOUS INDICATORS DETECTED')}
+                </span>
+                <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
+                  {isMalicious ? 'Security Warning: Dangerous Link Detected' : 'Security Assessment: Clean Link Structure'}
+                </div>
+              </div>
+            </div>
+
+            {/* Model Confidence Badge */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+            }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>
+                Model Confidence Score
+              </span>
+              <span style={{
+                fontSize: '20px',
+                fontWeight: 800,
+                color: isMalicious ? '#DC2626' : '#16A34A',
+              }}>
+                {result.confidence_percentage}%
+              </span>
+            </div>
+          </div>
+
+          {/* Detected Scanned URL Box */}
+          <div>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Scanned Link
+            </span>
+            <div style={{
+              marginTop: '6px',
+              padding: '10px 14px',
+              backgroundColor: '#F9FAFB',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontFamily: 'monospace',
+              fontSize: '13px',
+              wordBreak: 'break-all',
+              color: isMalicious ? '#B91C1C' : '#1F2937',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: isMalicious ? '#DC2626' : '#16A34A' }}>
+                {isMalicious ? 'link_off' : 'link'}
+              </span>
+              <span>{result.url}</span>
+            </div>
+          </div>
+
+          {/* Summary / Warning Section */}
+          <div style={{
+            padding: '14px 16px',
+            borderRadius: '10px',
+            backgroundColor: isMalicious ? '#FEF2F2' : '#F8FAFC',
+            border: `1px solid ${isMalicious ? '#FECACA' : '#E2E8F0'}`,
+          }}>
+            <div style={{
+              fontSize: '13.5px',
+              fontWeight: 700,
+              color: isMalicious ? '#991B1B' : '#334155',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '6px',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                {isMalicious ? 'warning' : 'info'}
+              </span>
+              <span>
+                {isMalicious ? 'Security Advisory & Recommendation' : 'Probabilistic Model Assessment'}
+              </span>
+            </div>
+            <p style={{ fontSize: '13px', color: isMalicious ? '#7F1D1D' : '#475569', lineHeight: 1.5 }}>
+              {isMalicious
+                ? 'We strongly recommend that you do NOT click this link. The machine learning model detected patterns commonly associated with phishing, smishing, or credential-stealing campaigns received via SMS, WhatsApp, or email.'
+                : 'No immediate malicious patterns were detected by the model. However, please remain cautious because machine learning classifications cannot guarantee complete safety — always verify unfamiliar links before clicking.'}
+            </p>
+          </div>
+
+          {/* Security Recommendations & Precautions */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            {/* Recommendations */}
+            <div style={{
+              padding: '14px',
+              backgroundColor: '#F9FAFB',
+              borderRadius: '10px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#7138E8' }}>security</span>
+                <span>Recommended Action</span>
+              </div>
+              <ul style={{ paddingLeft: '18px', fontSize: '12.5px', color: '#4B5563', lineHeight: 1.5, margin: 0 }}>
+                {(result.recommendations || []).map((rec, idx) => (
+                  <li key={idx} style={{ marginBottom: '4px' }}>{rec}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Precautions */}
+            <div style={{
+              padding: '14px',
+              backgroundColor: '#F9FAFB',
+              borderRadius: '10px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#7138E8' }}>tips_and_updates</span>
+                <span>Security Precautions</span>
+              </div>
+              <ul style={{ paddingLeft: '18px', fontSize: '12.5px', color: '#4B5563', lineHeight: 1.5, margin: 0 }}>
+                {(result.precautions || []).map((prec, idx) => (
+                  <li key={idx} style={{ marginBottom: '4px' }}>{prec}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Action Row */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            paddingTop: '16px',
+            borderTop: '1px solid var(--border-color)',
+          }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleClear}
+              style={{ fontSize: '12.5px', padding: '8px 16px' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>refresh</span>
+              <span>Scan Another Link</span>
+            </button>
+
+            {isMalicious && (
+              <button
+                type="button"
+                onClick={handleReportScam}
+                className="btn-danger"
+                style={{ fontSize: '12.5px', padding: '8px 16px' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>flag</span>
+                <span>Report to CyberAdmin</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

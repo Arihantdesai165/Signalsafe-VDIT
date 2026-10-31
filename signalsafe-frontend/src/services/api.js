@@ -143,6 +143,18 @@ class ApiService {
   }
 
   /**
+   * Centralized ML URL Prediction Service
+   * Executes trained Linear SVM classification on submitted URL.
+   * Shared by Website Safety Checker and Malicious Link Scanner.
+   */
+  async predictUrlSafety(url, scanType = 'website') {
+    return this.request('/security/predict-url', {
+      method: 'POST',
+      body: JSON.stringify({ url: url.trim(), scan_type: scanType }),
+    });
+  }
+
+  /**
    * Fraudulent Website Detection
    * Analyzes URLs through phishing models and heuristic algorithms
    */
