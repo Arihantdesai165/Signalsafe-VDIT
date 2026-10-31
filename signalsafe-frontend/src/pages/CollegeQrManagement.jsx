@@ -315,7 +315,7 @@ export default function CollegeQrManagement() {
   ];
 
   return (
-    <div style={{ maxWidth: '1140px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Top Header */}
       <div>
         <button

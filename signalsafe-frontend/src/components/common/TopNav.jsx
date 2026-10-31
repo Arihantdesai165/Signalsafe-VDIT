@@ -59,21 +59,13 @@ export default function TopNav({ onToggleSidebar }) {
   };
 
   return (
-    <header style={{
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-      backgroundColor: '#FFFFFF',
-      borderBottom: '1px solid var(--border-color)',
-      padding: '12px 28px',
-    }}>
+    <header className="app-topnav">
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '16px',
-        maxWidth: '1360px',
-        margin: '0 auto',
+        width: '100%',
       }}>
         {/* Left: Mobile Toggle & Page Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>

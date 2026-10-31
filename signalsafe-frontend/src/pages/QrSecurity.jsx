@@ -1,22 +1,34 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import RiskScoreMeter from '../components/common/RiskScoreMeter';
 import CameraModal from '../components/common/CameraModal';
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default function QrSecurity() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const fileInputRef = useRef(null);
+  const isMountedRef = useRef(true);
   const isCyberAdmin = (user?.role || '').toUpperCase() === 'CYBERADMIN';
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [scanPhase, setScanPhase] = useState('');
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [copiedPayload, setCopiedPayload] = useState(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -25,6 +37,8 @@ export default function QrSecurity() {
       setPreviewUrl(URL.createObjectURL(file));
       setResult(null);
       setErrorMessage(null);
+      setIsAnalyzing(false);
+      setScanPhase('');
     }
   };
 
@@ -36,6 +50,8 @@ export default function QrSecurity() {
       setPreviewUrl(URL.createObjectURL(file));
       setResult(null);
       setErrorMessage(null);
+      setIsAnalyzing(false);
+      setScanPhase('');
     }
   };
 
@@ -44,21 +60,50 @@ export default function QrSecurity() {
     setPreviewUrl(URL.createObjectURL(file));
     setResult(null);
     setErrorMessage(null);
+    setIsAnalyzing(false);
+    setScanPhase('');
   };
 
   const handleAnalyze = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || isAnalyzing) return;
 
     setIsAnalyzing(true);
     setErrorMessage(null);
+    setResult(null);
+
+    // Staged progression of secondary messages over ~5.6s (within 5-8s range)
+    const minDelay = async () => {
+      if (!isMountedRef.current) return;
+      setScanPhase('Reading QR pattern & alignment grids...');
+      await sleep(1400);
+      if (!isMountedRef.current) return;
+      setScanPhase('Extracting destination & payment parameters...');
+      await sleep(1400);
+      if (!isMountedRef.current) return;
+      setScanPhase('Checking destination safety against JCER registry...');
+      await sleep(1400);
+      if (!isMountedRef.current) return;
+      setScanPhase('Preparing security assessment & risk score...');
+      await sleep(1400);
+    };
+
     try {
-      const data = await api.analyzeQrCode(selectedFile);
-      setResult(data);
+      const [apiData] = await Promise.all([
+        api.analyzeQrCode(selectedFile),
+        minDelay(),
+      ]);
+      if (isMountedRef.current) {
+        setResult(apiData);
+      }
     } catch (err) {
       console.error('QR Analysis error:', err);
-      setErrorMessage(err.message || 'QR code decoding failed or server error occurred.');
+      if (isMountedRef.current) {
+        setErrorMessage(err.message || 'QR code decoding failed or server error occurred.');
+      }
     } finally {
-      setIsAnalyzing(false);
+      if (isMountedRef.current) {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -67,11 +112,22 @@ export default function QrSecurity() {
     setPreviewUrl(null);
     setResult(null);
     setErrorMessage(null);
+    setIsAnalyzing(false);
+    setScanPhase('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleCopyPayload = (text) => {
+    if (!text) return;
+    navigator.clipboard?.writeText(text);
+    setCopiedPayload(true);
+    setTimeout(() => {
+      if (isMountedRef.current) setCopiedPayload(false);
+    }, 2000);
+  };
+
   return (
-    <div style={{ maxWidth: '880px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Live Webcam Modal */}
       <CameraModal
         isOpen={isCameraOpen}
@@ -117,7 +173,7 @@ export default function QrSecurity() {
       </div>
 
       {/* Upload Dropzone Card */}
-      <div className="erp-card">
+      <div className="erp-card" style={{ padding: '36px 32px' }}>
         <input
           ref={fileInputRef}
           type="file"
@@ -185,59 +241,93 @@ export default function QrSecurity() {
           </div>
         ) : (
           <div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              gap: '16px',
-            }}>
+            {/* 1. Large Polished Viewfinder Preview Container */}
+            <div className={`qr-preview-container ${isAnalyzing ? 'qr-scanning-active' : ''}`}>
+              {/* Corner Viewfinder Brackets (Matching Reference Image 1) */}
+              <div className="qr-corner qr-corner-tl" />
+              <div className="qr-corner qr-corner-tr" />
+              <div className="qr-corner qr-corner-bl" />
+              <div className="qr-corner qr-corner-br" />
+
+              {/* Uploaded QR Code Image */}
+              <img
+                src={previewUrl}
+                alt="Uploaded QR Code"
+                className="qr-preview-image"
+              />
+
+              {/* Animated Blue Laser Scanning Overlay */}
+              {isAnalyzing && (
+                <div className="qr-scan-laser-wrap">
+                  <div className="qr-scan-line">
+                    <div className="qr-scan-glow-sweep" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Dynamic Status Indicator While Analyzing */}
+            {isAnalyzing && (
               <div style={{
-                maxWidth: '260px',
-                maxHeight: '260px',
-                overflow: 'hidden',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: '#F9FAFB',
-                padding: '8px',
+                marginTop: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                textAlign: 'center',
               }}>
-                <img
-                  src={previewUrl}
-                  alt="QR Preview"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }}
-                />
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '7px 18px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  color: '#1D4ED8',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)',
+                }}>
+                  <span className="material-symbols-outlined spin-icon" style={{ fontSize: '18px' }}>sync</span>
+                  <span>{scanPhase || 'Scanning QR Code...'}</span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                  Analyzing cryptographic patterns, bank handles, and JCER official registry records...
+                </span>
               </div>
+            )}
 
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="btn-secondary"
-                  disabled={isAnalyzing}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
-                  <span>Choose Another QR</span>
-                </button>
+            {/* 2. Equal-Sized Action Buttons Inside the White Card */}
+            <div className="qr-action-buttons">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="btn-secondary qr-action-btn"
+                disabled={isAnalyzing}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+                <span>Choose Another QR</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  className="btn-primary"
-                  disabled={isAnalyzing}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <span className="material-symbols-outlined spin-icon" style={{ fontSize: '18px' }}>sync</span>
-                      <span>Decoding & Inspecting QR...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>qr_code_scanner</span>
-                      <span>Analyze QR Destination</span>
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                className="btn-primary qr-action-btn"
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <span className="material-symbols-outlined spin-icon" style={{ fontSize: '18px' }}>sync</span>
+                    <span>Scanning QR Code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>qr_code_scanner</span>
+                    <span>Analyze QR Destination</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
@@ -261,11 +351,139 @@ export default function QrSecurity() {
         </div>
       )}
 
+      {/* Decoded QR Destination Information Card */}
+      {result && !isAnalyzing && (
+        <div className="erp-card">
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '16px',
+            paddingBottom: '14px',
+            borderBottom: '1px solid var(--border-color)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: '#F3E8FF',
+                border: '1px solid #DDD6FE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#7138E8',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>data_object</span>
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#202124', margin: 0 }}>
+                  Decoded QR Destination
+                </h3>
+                <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                  Cryptographically extracted payload content & destination parameters
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: result.status === 'safe' ? '#F0FDF4' : result.status === 'insufficient_evidence' ? '#F9FAFB' : '#FFFBEB',
+                color: result.status === 'safe' ? '#16A34A' : result.status === 'insufficient_evidence' ? '#4B5563' : '#D97706',
+                border: `1px solid ${result.status === 'safe' ? '#BBF7D0' : result.status === 'insufficient_evidence' ? '#E5E7EB' : '#FDE68A'}`,
+              }}>
+                {result.destination_type || ((result.payment_to || (result.raw_data && result.raw_data.startsWith('upi://'))) ? 'UPI Payment QR' : 'Standard URL / QR')}
+              </span>
+            </div>
+          </div>
+
+          {/* Raw Payload Monospace Box with Copy Button */}
+          <div style={{
+            padding: '12px 14px',
+            backgroundColor: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}>
+            <div style={{
+              fontFamily: 'monospace',
+              fontSize: '12.5px',
+              color: '#1E293B',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+            }}>
+              {result.raw_data || result.payment_to || 'Unable to decode raw stream'}
+            </div>
+            {(result.raw_data || result.payment_to) && (
+              <button
+                type="button"
+                onClick={() => handleCopyPayload(result.raw_data || result.payment_to)}
+                className="btn-secondary"
+                style={{ fontSize: '11.5px', padding: '4px 10px', gap: '4px', flexShrink: 0 }}
+                title="Copy decoded QR text"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+                  {copiedPayload ? 'check' : 'content_copy'}
+                </span>
+                <span>{copiedPayload ? 'Copied' : 'Copy'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Extracted Details Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '12px',
+            marginTop: '16px',
+          }}>
+            <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFD', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Target Payee / Destination</span>
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#202124', marginTop: '3px' }}>
+                {result.payment_to || result.extracted_fields?.['UPI ID'] || 'N/A'}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFD', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Merchant / Display Name</span>
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#202124', marginTop: '3px' }}>
+                {result.payee_name || result.extracted_fields?.['Payee Name'] || 'Unspecified'}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFD', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Transaction Amount</span>
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#7138E8', marginTop: '3px' }}>
+                {result.amount ? `₹${result.amount}` : (result.extracted_fields?.['Amount'] || 'Dynamic / User Specified')}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 14px', backgroundColor: '#F9FAFD', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase' }}>Banking Handle / Processor</span>
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#202124', marginTop: '3px' }}>
+                {result.extracted_fields?.['Banking Handle'] || (result.payment_to?.includes('@') ? '@' + result.payment_to.split('@')[1] : 'Direct')}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Results */}
-      {result && <RiskScoreMeter result={result} />}
+      {result && !isAnalyzing && <RiskScoreMeter result={result} />}
 
       {/* College QR Verification Card */}
-      {result && result.college_verification && (() => {
+      {result && !isAnalyzing && result.college_verification && (() => {
         const cv = result.college_verification;
         const cls = cv.classification || result.classification;
         const isVerified = cls === 'VERIFIED_JCER_COLLEGE_QR';

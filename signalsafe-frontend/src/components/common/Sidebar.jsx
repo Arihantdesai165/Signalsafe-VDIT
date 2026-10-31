@@ -51,7 +51,6 @@ export default function Sidebar({ isOpen, onClose }) {
         { path: '/website', label: 'Website Safety Checker', icon: 'travel_explore' },
         { path: '/link', label: 'Malicious Link Scanner', icon: 'link' },
         { path: '/qrcode', label: 'QR Code Security', icon: 'qr_code_scanner' },
-        { path: '/screenshot', label: 'Screenshot Detector', icon: 'image_search' },
         { path: '/report', label: 'Report Incident', icon: 'flag' },
         { path: '/email', label: 'Phishing Email', icon: 'mail', badge: 'Preview' },
       ],
@@ -164,18 +163,19 @@ export default function Sidebar({ isOpen, onClose }) {
                   onClick={onClose}
                   className={({ isActive }) => `nav-item-link ${isActive ? 'active' : ''}`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span className="material-symbols-outlined">{item.icon}</span>
-                    <span>{item.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px', flexShrink: 0 }}>{item.icon}</span>
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>
                   </div>
                   {item.badge && (
                     <span style={{
-                      fontSize: '10px',
+                      fontSize: '10.5px',
                       fontWeight: 700,
-                      padding: '2px 6px',
+                      padding: '2px 7px',
                       borderRadius: '4px',
-                      backgroundColor: '#F3F4F6',
-                      color: '#4B5563',
+                      backgroundColor: '#F3E8FF',
+                      color: '#7138E8',
+                      flexShrink: 0,
                     }}>
                       {item.badge}
                     </span>

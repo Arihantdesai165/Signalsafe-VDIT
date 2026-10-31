@@ -75,7 +75,7 @@ export default function LinkScanner() {
   const isMalicious = result && (result.prediction === 1 || result.classification === 'Malicious');
 
   return (
-    <div style={{ maxWidth: '880px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+<div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Top Header & Navigation */}
       <div>
         <button
